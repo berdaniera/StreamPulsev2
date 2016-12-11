@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<div class="row"><div class="col-md-6 col-md-offset-3">
+  <form id="dnld" class="form-horizontal">
+    <div class="input-group input-group-sm">
+      <span class="input-group-addon">Choose site(s)</span>
+      <select class="form-control selectpicker" name="site" multiple>
+        {% for s in sites %}
+        <option value="{{s}}">{{s}}</option>
+        {% endfor %}
+      </select>
+      <span class="input-group-btn">
+        <button name="dnldsite" class="btn btn-primary">Select</button>
+      </span>
+    </div><br>
+  </form>
+</div></div>
+
+
+
+<div class="row" id="dnldspecs"><div class="col-md-6 col-md-offset-3">
+  <form id="dnld_specs" action="/_getcsv" method="POST" class="form-horizontal">
+    Choose dates:<br>
+    <input type="hidden" name="site" value="">
+    <input type="hidden" name="variables" value="">
+    <div class="input-daterange input-group" id="datepicker">
+        <input type="text" id="startDate" class="input-sm form-control" name="startDate" data-date-format="YYYY-MM-DD"/>
+        <span class="input-group-addon">to</span>
+        <input type="text" id="endDate" class="input-sm form-control" name="endDate" data-date-format="YYYY-MM-DD"/>
+    </div><br>
+    Select variables:<br>
+    <div id="dnld_vars"></div><br>
+    <button id="getcsv" type="submit" value=Download class="btn btn-primary btn-block">Download</button>
+  </form>
+</div></div>
+
+<script>
+// https://github.com/uxsolutions/bootstrap-datepicker
+// https://silviomoreto.github.io/bootstrap-select/examples/
+// site picker
+// date picker
+
+$(function(){
+  $("button[name=dnldsite]").click(function(){
+    var dat = {}
+    dat['site'] = $('select[name=site]').val();
+    $.ajax({
+      type: 'POST',
+      url:'/_getstats',
+      data: JSON.stringify(dat),
+      contentType: 'application/json;charset=UTF-8',
+      success: function(response){
+        $('#dnldspecs').show();
+        $('.input-daterange').datepicker({
+            startDate: response.startDate,
+            endDate: response.endDate,
+            todayHighlight: true,
+            format: 'yyyy-mm-dd'
+        });
+        $('#dnldspecs input[name=site]').val(response.site);
+        var i;
+        for (i = 0; i < response.variables.length; ++i) {
+            $('#dnld_vars').append('<input type="checkbox" id="variables" value="'+response.variables[i]+'"> '+response.variables[i]+'<br>');
+        }
+
+      },
+      error: function(error){
+        console.log(error);
+      }
+    });
+    return false;
+  })
+});
+
+$(function(){
+  $("#getcsv").click(function(){
+    $('#dnldspecs input[name=variables]').val( $('input:checkbox:checked').map(function() { return this.value; }).get() );
+  })
+});
+
+</script>
+
+
+{% endblock %}

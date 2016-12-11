@@ -1,0 +1,292 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<div class="row"><div class="col-md-6 col-md-offset-3">
+  <form id="dnld" class="form-horizontal">
+    <div class="input-group input-group-sm">
+      <span class="input-group-addon">Choose a site</span>
+      <select class="form-control" name="site">
+        {% for s in sites %}
+        <option value="{{s}}">{{s}}</option>
+        {% endfor %}
+      </select>
+      <span class="input-group-btn">
+        <button name="dnldsite" class="btn btn-primary">Select</button>
+      </span>
+    </div><br>
+  </form>
+</div></div>
+
+
+<div class="row" id="dnldspecs"><div class="col-md-6 col-md-offset-3">
+  <form id="dnld_specs" class="form-horizontal">
+    Choose dates:<br>
+    <input type="hidden" name="site" value="">
+    <input type="hidden" name="variables" value="">
+    <div class="input-daterange input-group" id="datepicker">
+        <input type="text" id="startDate" class="input-sm form-control" name="startDate" data-date-format="YYYY-MM-DD"/>
+        <span class="input-group-addon">to</span>
+        <input type="text" id="endDate" class="input-sm form-control" name="endDate" data-date-format="YYYY-MM-DD"/>
+    </div><br>
+    Select variables:<br>
+    <div id="dnld_vars"></div><br>
+    <button id="getviz" class="btn btn-primary btn-block">View</button>
+  </form>
+</div></div>
+
+<div class="row" id="flagging">
+<div class="col-md-3 col-md-offset-2">
+  <select id="flags" placeholder="Choose (or enter) a flag ID" name="flagID">
+    <option value="">Choose (or enter) a flag ID</option>
+    {% for f in flags %}
+    <option value="{{f}}">{{f}}</option>
+    {% endfor %}
+  </select>
+</div>
+<div class="col-md-5">
+  <div class="input-group">
+    <input type="text" name="fcomment" class="form-control" placeholder="Add comments (optional)">
+    <span class="input-group-btn">
+      <button class="btn btn-primary" type="button" id="addflag">Flag selected</button>
+    </span>
+  </div>
+<!-- <br><p class="text-muted"><em>You can search for any aspect of the article (including a DOI). Right now the search only returns the top 20 results -- if your article is not in the results, please refine your search.</em></p> -->
+</div></div>
+
+<button class="btn btn-primary" type="button" id="zoomin">Zoom in to selected region</button>
+
+
+<div class="row" id="graphs"></div>
+
+<script>
+$('#flags').selectize({
+    delimiter: ',',
+    persist: false,
+    create: function(input) {
+        return {
+            value: input,
+            text: input
+        }
+    }
+});
+
+function Plots(variables, data){
+  data.forEach(function(d){ d.date = parseDate(d['DateTime_UTC']) });
+  x.domain(d3.extent(data, function(d) { return d.date; }));
+  for (var i = 0; i < variables.length; ++i) {
+    vvv = variables[i];
+    y.domain(d3.extent(data, function(d) { return d[vvv]; }));
+    var line = d3.line()
+        .defined(function(d){return d[vvv];})
+        .x(function(d) { return x(d.date); })
+        .y(function(d) { return y(d[vvv]); });
+    var svg = d3.select("#graphs").append("svg")
+      .datum(data)
+        .attr("class",vvv)
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+      .on('dblclick',redrawPoints);
+    svg.append("g")
+        .attr("class", "axis axis--x")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
+    svg.append("g")
+        .attr("class", "axis axis--y")
+        .call(d3.axisLeft().scale(y).ticks(3))
+      .append("text")
+        .attr("fill", "#000")
+        .attr("dy", "-0.71em")
+        .attr("dx", "0.71em")
+        .style("text-anchor", "start")
+        .text(vvv);
+    svg.selectAll(".dot")
+        .data(data.filter(function(d) { return d[vvv]; }))
+      .enter().append("circle")
+        .attr("class", "dot")
+        .attr("cx", line.x())
+        .attr("cy", line.y())
+        .attr("r", 2);
+    svg.append("g")
+        .attr("class", "brush")
+        .attr("id", vvv)
+        .call(brush);
+    // svg.append("path")
+    //     .attr("class", "line")
+    //     .attr("d", line);
+
+  }
+}
+
+// Clear the previously-active brush, if any.
+function brushstart() {
+  // console.log(this.nodes());
+  d3.selectAll(".brush").call(brush.move, null);
+  selectedBrush = $(this).attr("id")
+}
+function brushmove() {
+  var s = d3.event.selection;
+  if (!s) {
+    // d3.selectAll(".dot").classed("selected", false);
+  } else {
+    // x.domain([s[0], s[1].map(x.invert, x));
+    // svg.select(".brush").call(brush.move, null);
+    ext0 = x.invert(s[0])
+    ext1 = x.invert(s[1])
+    d3.select("."+selectedBrush).selectAll(".dot").classed("selected", function(d) {
+      is_brushed = ext0 <= d.date && d.date <= ext1;
+      // console.log(is_brushed)
+      return is_brushed;
+    });
+  }
+}
+function brushend(){}
+function redrawPoints(){
+  s = d3.brushSelection(d3.select("#"+selectedBrush).node())
+  if(!s){
+    extent = "none"
+  }else{
+    ext0 = x.invert(s[0])
+    ext1 = x.invert(s[1])
+    extent = [ext0,ext1]
+  }
+  if(extent=="none"){
+    x.domain(d3.extent(data, function(d) { return d.date; }));
+  }else{
+    x.domain(extent);
+  }
+  for (var i = 0; i < variables.length; ++i) {
+    vvv = variables[i];
+    d3.select("."+vvv).select(".axis--x").call(xAxis); //redraw axis
+    y.domain(d3.extent(data, function(d) { return d[vvv]; }));
+    var line = d3.line()
+        .defined(function(d){return d[vvv];})
+        .x(function(d) { return x(d.date); })
+        .y(function(d) { return y(d[vvv]); });
+    d3.select("."+vvv).selectAll(".dot")
+        .attr("cx", line.x())
+        .attr("cy", line.y())
+  }
+  d3.selectAll(".dot").classed("outside", function(d) {
+    is_inplot = extent[0] > d.date || d.date > extent[1];
+    return is_inplot;
+  });
+  d3.selectAll(".dot").classed("selected", false);
+  d3.selectAll(".brush").call(brush.move, null);
+}
+
+var margin = {top: 40, right: 40, bottom: 40, left: 40},
+    width = $("#graphs").width() - margin.left - margin.right,
+    height = 250 - margin.top - margin.bottom;
+var parseDate = d3.utcParse("%Y-%m-%dT%H:%M:%S.%LZ");
+var x = d3.scaleTime().range([0, width]),
+    y = d3.scaleLinear().range([height, 0]),
+    xAxis = d3.axisBottom().scale(x).ticks(6);
+var brush = d3.brushX()
+  .on("start", brushstart)
+  .on("brush", brushmove)
+  .on("end", brushend);
+var selectedBrush;
+var data;
+var variables;
+
+$(function(){
+  $("button[name=dnldsite]").click(function(){
+    var dat = {}
+    dat['site'] = [$('select[name=site]').val()];
+    $.ajax({
+      type: 'POST',
+      url:'/_getstats',
+      data: JSON.stringify(dat),
+      contentType: 'application/json;charset=UTF-8',
+      success: function(response){
+        $('.input-daterange').datepicker({
+            startDate: response.startDate,
+            endDate: response.endDate,
+            todayHighlight: true,
+            format: 'yyyy-mm-dd'
+        });
+        $('#dnldspecs input[name=site]').val(response.site);
+        $("#dnld_vars").empty();
+        var i;
+        for (i = 0; i < response.variables.length; ++i) {
+            $('#dnld_vars').append('<input type="checkbox" id="variables" value="'+response.variables[i]+'"> '+response.variables[i]+'<br>');
+        }
+        $('#dnldspecs').show();
+      },
+      error: function(error){
+        console.log(error);
+      }
+    });
+    return false;
+  })
+});
+
+$(function(){
+  $("#getviz").click(function(){
+    var dat = {}
+    dat['site'] = $('select[name=site]').val();
+    dat['startDate'] = $('#startDate').datepicker('getUTCDate');
+    dat['endDate'] = $('#endDate').datepicker('getUTCDate');
+    dat['variables'] = $('input:checkbox:checked').map(function() { return this.value; }).get();
+    $('#dnldspecs input[name=variables]').val( $('input:checkbox:checked').map(function() { return this.value; }).get() );
+    $.ajax({
+      type: 'POST',
+      url:'/_getviz',
+      data: JSON.stringify(dat),
+      contentType: 'application/json;charset=UTF-8',
+      success: function(response){
+        $("#graphs").empty();
+        data = JSON.parse(response.dat);
+        variables = response.variables;
+        Plots(variables, data);
+        $('#flagging').show();
+      },
+      error: function(error){
+        console.log(error);
+      }
+    });
+    return false;
+  })
+});
+
+$(function(){ $("#zoomin").click(redrawPoints) })
+
+$(function(){
+  $("#addflag").click(function(){
+    s = d3.brushSelection(d3.select("#"+selectedBrush).node())
+    ext0 = x.invert(s[0])
+    ext1 = x.invert(s[1])
+    flagid = $("select[name=flagID]").val();
+    comment = $("input[name=fcomment]").val();
+    console.log(ext0);
+    console.log(ext1);
+    console.log(selectedBrush);
+    console.log(flagid);
+    console.log(comment);
+    d3.select("."+selectedBrush).selectAll(".selected").classed("highlighted", function(d) {
+      is_brushed = ext0 <= d.date && d.date <= ext1;
+      return is_brushed;
+    });
+    // $.ajax({
+    //   type: 'POST',
+    //   url:'/_getviz',
+    //   data: JSON.stringify(dat),
+    //   contentType: 'application/json;charset=UTF-8',
+    //   success: function(response){
+    //     $("#graphs").empty();
+    //     Plots(response.variables, JSON.parse(response.dat));
+    //     $('#flagging').show();
+    //   },
+    //   error: function(error){
+    //     console.log(error);
+    //   }
+    // });
+    // return false;
+  })
+});
+
+</script>
+
+{% endblock %}
