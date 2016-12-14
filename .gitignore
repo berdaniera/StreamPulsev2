@@ -4,3 +4,5 @@ spv2code
 static/img/*
 spenv/*
 config*
+wsgi*
+*.ini
