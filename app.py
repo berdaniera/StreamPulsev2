@@ -373,7 +373,6 @@ def logout():
 
 @app.route('/')
 @app.route('/index')
-@login_required
 def index():
     nobs = pd.read_sql("select region, site, count(id) as n from data group by region, site", db.engine)
     nuse = pd.read_sql("select count(id) as n from user", db.engine)
@@ -381,6 +380,7 @@ def index():
     return render_template('index.html',nobs="{:,}".format(nobs.n.sum()),nuse=nuse.n[0],nmod=0)
 
 @app.route('/upload', methods=['GET', 'POST'])
+@login_required
 def upload():
     if request.method == 'POST':  # checks
         if 'file' not in request.files:
@@ -487,7 +487,9 @@ def confirmcolumns():
     flash('Uploaded '+str(len(xx.index))+' values, thank you!','alert-success')
     return redirect(url_for('upload'))
 
+# check login status...
 @app.route('/download')
+@login_required
 def download():
     xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
     sites = xx['sites'].tolist()
@@ -529,6 +531,7 @@ def getcsv():
     return resp
 
 @app.route('/visualize')
+@login_required
 def visualize():
     xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
     sites = xx['sites'].tolist()
