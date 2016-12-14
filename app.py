@@ -21,7 +21,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = "insecure"
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:pass@localhost/sp'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = '/home/aaron/spv2/static/uploads'
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
 ########## DATABASE
 #sb = pysb.SbSession()
@@ -185,7 +185,7 @@ def before_request():
 ####################
 ########### FUNCTIONS
 # Load core data sites
-core = pd.read_csv('/home/aaron/spv2/static/sitelist.csv')
+core = pd.read_csv('static/sitelist.csv')
 core['SITECD'] = list(core["REGIONID"].map(str) +"_"+ core["SITEID"])
 core = core.set_index('SITECD')
 core.head()

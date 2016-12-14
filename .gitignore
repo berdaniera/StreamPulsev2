@@ -2,3 +2,4 @@ spv2code
 *.csv
 *.pyc
 static/img/*
+spenv/*
