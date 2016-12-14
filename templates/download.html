@@ -2,22 +2,21 @@
 {% block body %}
 
 <div class="row"><div class="col-md-6 col-md-offset-3">
-  <form id="dnld" class="form-horizontal">
-    <div class="input-group input-group-sm">
-      <span class="input-group-addon">Choose site(s)</span>
-      <select class="form-control selectpicker" name="site" multiple>
+  <form id="dnld">
+    <div class="col-md-8">
+      <select placeholder="Choose site(s)" id="dsite" name="site" multiple>
+        <option value="">Choose site(s)</option>
         {% for s in sites %}
         <option value="{{s}}">{{s}}</option>
         {% endfor %}
       </select>
-      <span class="input-group-btn">
-        <button name="dnldsite" class="btn btn-primary">Select</button>
-      </span>
-    </div><br>
+    </div>
+    <div class="col-md-4">
+      <button name="dnldsite" class="btn btn-primary btn-block">Select</button>
+    </div>
   </form>
 </div></div>
-
-
+<br>
 
 <div class="row" id="dnldspecs"><div class="col-md-6 col-md-offset-3">
   <form id="dnld_specs" action="/_getcsv" method="POST" class="form-horizontal">
@@ -36,10 +35,11 @@
 </div></div>
 
 <script>
-// https://github.com/uxsolutions/bootstrap-datepicker
-// https://silviomoreto.github.io/bootstrap-select/examples/
-// site picker
-// date picker
+$('#dsite').selectize({
+    delimiter: ',',
+    persist: false,
+    create: function(input) { return { value: input,text: input } }
+});
 
 $(function(){
   $("button[name=dnldsite]").click(function(){
@@ -58,12 +58,13 @@ $(function(){
             todayHighlight: true,
             format: 'yyyy-mm-dd'
         });
+        $('#startDate').val(response.startDate);
+        $('#endDate').val(response.endDate);
         $('#dnldspecs input[name=site]').val(response.site);
         var i;
         for (i = 0; i < response.variables.length; ++i) {
-            $('#dnld_vars').append('<input type="checkbox" id="variables" value="'+response.variables[i]+'"> '+response.variables[i]+'<br>');
+            $('#dnld_vars').append('<input type="checkbox" id="variables" value="'+response.variables[i]+'" checked> '+response.variables[i]+'<br>');
         }
-
       },
       error: function(error){
         console.log(error);
@@ -78,8 +79,6 @@ $(function(){
     $('#dnldspecs input[name=variables]').val( $('input:checkbox:checked').map(function() { return this.value; }).get() );
   })
 });
-
 </script>
-
 
 {% endblock %}

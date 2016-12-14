@@ -1,34 +1,49 @@
 {% extends "layout.html" %}
 {% block body %}
 
-{% for f in filenames %}
-{{f}}<br>
-{% endfor %}
+<p><i>Uploading {{filenames|length}} files:</i><br>
+{% for f in filenames %} {{f}} {% endfor %}</p>
 
-<p>Match your columns (on the left) with the database variables (in the dropdown). To exclude a column, leave the dropdown blank.</p>
-<p><i>Double check your column specifications.</i></p>
+<p>Match <u>your columns (on the left)</u> with the <u>database variables (in the dropdown)</u>. To exclude a column, leave the dropdown blank. The dropdowns will automatically populate with your last selection.</p>
+<p><b>Please double check your column specifications!</b> If you duplicate variables in the dropdowns our database will consider those columns as the same variable (and average them by date).</p>
 
 <div class="row"><div class="col-md-6 col-md-offset-3">
+  <p class="text-right">Don't see your variables? <a href="mailto:aaron.berdanier@gmail.com">Send us an email!</a></p>
   <form id="choosecolumns" class="form-horizontal" method="POST" action="/upload_confirm">
     <input type="hidden" name="tmpfile" value="{{tmpfile}}">
     <input type="hidden" name="cdict" value="">
     {% for c in columns %}
     <div class="input-group input-group-sm">
       <span class="input-group-addon">{{c}}</span>
-      <select class="form-control selectpicker" name="{{c}}">
-        <option selected disabled value></option>
-        {% for v in variables %}
-        <option value="{{v}}">{{v}}</option>
-        {% endfor %}
+      <select class="form-control" name="{{c}}">
+        {% if c in cdict.keys() %}
+          {% for v in variables %}
+            {% if v == cdict[c] %}
+            <option value="{{v}}" selected>{{v}}</option>
+            {% else %}
+            <option value="{{v}}">{{v}}</option>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <option selected disabled value></option>
+          {% for v in variables %}
+          <option value="{{v}}">{{v}}</option>
+          {% endfor %}
+        {% endif %}
       </select>
     </div><br>
     {% endfor %}
-    <div class="input-group input-group-sm">
-      <button name="columnin" type="submit" class="btn btn-primary btn-block">Submit</button>
-    </div>
+    <button name="columnin" type="submit" class="btn btn-primary btn-block">Submit</button>
+  </form>
+  <form id="cancelcols" class="form-horizontal" method="POST" action="/upload_cancel">
+    <input type="hidden" name="ofiles" value="{{ filenames|join(',') }}">
+    <input type="hidden" name="tmpfile" value="{{tmpfile}}">
+    <button name="cancel" class="btn btn-link btn-block">Cancel</button>
   </form>
 </div></div>
-{{tmpfile}}
+
+
+
 
 <script>
 function alertbox(alrt,msg){
@@ -40,28 +55,6 @@ $(function(){
   $('button[name=columnin]').click(function() {
     cdict = JSON.stringify($("#choosecolumns").find("select").serializeArray());
     $('#choosecolumns input[name=cdict]').val( cdict );
-    //
-    //
-    //
-    // d = {}
-    // d['tmpfile'] = $('input[name=tmpfile]').val()
-    // d['dict'] =
-    // JSON.stringify(d)
-    // $.ajax({
-    //   type: 'POST',
-    //   url:'/upload_confirm',
-    //   data: JSON.stringify(d),
-    //   contentType: 'application/json;charset=UTF-8',
-    //   success: function(response){
-    //     if (response.result=='Success') {
-    //       console.log("success");
-    //       // $("#alerts").append(alertbox('success','Uploaded '+result.nobs+' data points. Thank you!'))
-    //     } else {
-    //       $("#alerts").append(alertbox('warning','Unknown error, please contact Aaron...'))
-    //     }
-    //   }
-    // })
-    // return false;
   });
 })
 

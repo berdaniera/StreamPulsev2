@@ -2,56 +2,57 @@
 {% block body %}
 
 <div class="row"><div class="col-md-6 col-md-offset-3">
-  <form id="dnld" class="form-horizontal">
-    <div class="input-group input-group-sm">
-      <span class="input-group-addon">Choose a site</span>
-      <select class="form-control" name="site">
+  <form id="qaqc">
+    <div class="col-md-8">
+      <select placeholder="Choose a site" id="dsite" name="site">
+        <option value="">Choose a site</option>
         {% for s in sites %}
         <option value="{{s}}">{{s}}</option>
         {% endfor %}
       </select>
-      <span class="input-group-btn">
-        <button name="dnldsite" class="btn btn-primary">Select</button>
-      </span>
-    </div><br>
+    </div>
+    <div class="col-md-4">
+      <button name="qaqcsite" class="btn btn-primary btn-block">Select</button>
+    </div>
   </form>
 </div></div>
+<br>
 
 <div class="row" id="flagging">
-<div class="col-md-4">
-  <select id="flags" placeholder="Choose (or enter) a flag ID" name="flagID">
-    <option value="">Choose (or enter) a flag ID</option>
-    {% for f in flags %}
-    <option value="{{f}}">{{f}}</option>
-    {% endfor %}
-  </select>
-</div>
-<div class="col-md-6">
-    <input type="text" name="fcomment" class="form-control" placeholder="Add comments (optional)">
-</div>
-<div class="col-md-2">
-  <button class="btn btn-success btn-block" type="button" id="addflag">Flag selected</button>
+  <div class="col-md-4">
+    <select id="flags" placeholder="Choose (or enter) a flag ID" name="flagID">
+      <option value="">Choose (or enter) a flag ID</option>
+      {% for f in flags %}
+      <option value="{{f}}">{{f}}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-6">
+      <input type="text" name="fcomment" class="form-control" placeholder="Add comments (optional)">
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-success btn-block" type="button" id="addflag">Flag selected</button>
+  </div>
+  <!-- <br><p class="text-muted"><em>You can search for any aspect of the article (including a DOI). Right now the search only returns the top 20 results -- if your article is not in the results, please refine your search.</em></p> -->
+  <button class="btn btn-primary" type="button" id="zoomin">Zoom in to selected region</button>
+  <button class="btn btn-danger" type="button" id="addna">Set NA values</button>
 </div>
 
-<!-- <br><p class="text-muted"><em>You can search for any aspect of the article (including a DOI). Right now the search only returns the top 20 results -- if your article is not in the results, please refine your search.</em></p> -->
-
-</div>
-
-<button class="btn btn-primary" type="button" id="zoomin">Zoom in to selected region</button>
 
 
 <div class="row" id="graphs"></div>
 
 <script>
+$('#dsite').selectize({
+    delimiter: ',',
+    persist: false,
+    create: function(input) { return {value: input,text: input} }
+});
+
 $('#flags').selectize({
     delimiter: ',',
     persist: false,
-    create: function(input) {
-        return {
-            value: input,
-            text: input
-        }
-    }
+    create: function(input) { return {value: input,text: input} }
 });
 
 function Plots(variables, data){
@@ -71,7 +72,7 @@ function Plots(variables, data){
         .attr("height", height + margin.top + margin.bottom)
       .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-      .on('dblclick',redrawPoints);
+      .on('dblclick',function(){ redrawPoints(zo=true) });
     svg.append("g")
         .attr("class", "axis axis--x")
         .attr("transform", "translate(0," + height + ")")
@@ -126,36 +127,66 @@ function brushmove() {
   }
 }
 function brushend(){}
-function redrawPoints(){
+function redrawPoints(zo){
   s = d3.brushSelection(d3.select("#"+selectedBrush).node())
-  if(!s){
+  if(!s){ // nothing selected
     extent = "none"
   }else{
     ext0 = x.invert(s[0])
     ext1 = x.invert(s[1])
     extent = [ext0,ext1]
   }
-  if(extent=="none"){
+  if(extent=="none"){ // reset view
     x.domain(d3.extent(data, function(d) { return d.date; }));
   }else{
-    x.domain(extent);
+    if(zo){
+      x.domain(extent);
+    }
   }
   for (var i = 0; i < variables.length; ++i) {
     vvv = variables[i];
+    // redraw data
     d3.select("."+vvv).select(".axis--x").call(xAxis); //redraw axis
     y.domain(d3.extent(data, function(d) { return d[vvv]; }));
     var line = d3.line()
         .defined(function(d){return d[vvv];})
         .x(function(d) { return x(d.date); })
         .y(function(d) { return y(d[vvv]); });
+
     d3.select("."+vvv).selectAll(".dot")
         .attr("cx", line.x())
         .attr("cy", line.y())
+        // .classed("naval",function(d)){
+        //   return dna[d.date]
+        // }
+        // .classed("naval", function(d){
+        //   // return dna[d.date] === null;
+        //   data.filter(function(e){
+        //     if(e.date == d.date){
+        //       if(e[vvv]==null&&d[vvv]!=null)
+        //       console.log(e[vvv])
+        //     }
+        //   })
+        //   // console.log(data.filter(function(e) d.date))
+        //   return false;
+        // });
+    if(!zo){ // adding na values
+      dna = {}
+      datna.forEach(function(e){dna[e.DateTime_UTC]=e[vvv]})
+      d3.select("."+vvv).selectAll(".dot")
+        .classed("naval", function(d) {
+          return dna[d.DateTime_UTC] == null;
+        });
+    }
+
+    if(zo){ // check for outside points
+      d3.select("."+vvv).selectAll(".dot")
+        .classed("outside", function(d) {
+          is_inplot = extent[0] > d.date || d.date > extent[1];
+          return is_inplot;
+        });
+    }
   }
-  d3.selectAll(".dot").classed("outside", function(d) {
-    is_inplot = extent[0] > d.date || d.date > extent[1];
-    return is_inplot;
-  });
   d3.selectAll(".dot").classed("selected", false);
   d3.selectAll(".brush").call(brush.move, null);
 }
@@ -174,9 +205,11 @@ var brush = d3.brushX()
 var selectedBrush;
 var data;
 var variables;
+var zo;
+var datna;
 
 $(function(){
-  $("button[name=dnldsite]").click(function(){
+  $("button[name=qaqcsite]").click(function(){
     var dat = {}
     dat['site'] = $('select[name=site]').val();
     $.ajax({
@@ -185,6 +218,7 @@ $(function(){
       data: JSON.stringify(dat),
       contentType: 'application/json;charset=UTF-8',
       success: function(response){
+        $("#graphs").empty();
         data = JSON.parse(response.dat);
         variables = response.variables;
         Plots(variables, data);
@@ -198,27 +232,54 @@ $(function(){
   })
 });
 
-$(function(){ $("#zoomin").click(redrawPoints) })
+$(function(){
+  $("#zoomin").click(function(){
+    redrawPoints(zo = true)
+  });
+})
+
+function alertbox(alrt,msg){
+  return '<div class="alert alert-dismissible alert-'+alrt+'">\
+    <button class="close" data-dismiss="alert" aria-label="close">&times;</button>\
+    '+msg+'</div>'
+}
+
 
 $(function(){
-  $("#addflag").click(function(){
+  $("#addna").click(function(){
     s = d3.brushSelection(d3.select("#"+selectedBrush).node())
-    ext0 = x.invert(s[0])
-    ext1 = x.invert(s[1])
-    flagid = $("select[name=flagID]").val();
-    comment = $("input[name=fcomment]").val();
-    console.log(ext0);
-    console.log(ext1);
-    console.log(selectedBrush);
-    console.log(flagid);
-    console.log(comment);
-    d3.select("."+selectedBrush).selectAll(".selected").classed("highlighted", function(d) {
-      is_brushed = ext0 <= d.date && d.date <= ext1;
-      return is_brushed;
+    dat = {}
+    dat['site'] = $('select[name=site]').val();
+    dat['startDate'] = x.invert(s[0]);
+    dat['endDate'] = x.invert(s[1]);
+    dat['var'] = selectedBrush;
+    $.ajax({
+      type: 'POST',
+      url:'/_addna',
+      data: JSON.stringify(dat),
+      contentType: 'application/json;charset=UTF-8',
+      success: function(response){
+        console.log("success")
+        $("#alerts").append(alertbox('success','Added NA values.'))
+        datna = JSON.parse(response.dat);
+        redrawPoints(zo=false)
+      },
+      error: function(error){
+        console.log(error);
+      }
     });
+    return false;
+    // console.log(ext0);
+    // console.log(ext1);
+    // console.log(selectedBrush);
+    // d3.select("."+selectedBrush).selectAll(".selected").classed("naval", function(d) {
+    //   is_brushed = dat['startDate'] <= d.date && d.date <= dat['endDate'];
+    //   return is_brushed;
+    // });
+
     // $.ajax({
     //   type: 'POST',
-    //   url:'/_getviz',
+    //   url:'/_addna',
     //   data: JSON.stringify(dat),
     //   contentType: 'application/json;charset=UTF-8',
     //   success: function(response){
@@ -231,6 +292,37 @@ $(function(){
     //   }
     // });
     // return false;
+  });
+})
+
+$(function(){
+  $("#addflag").click(function(){
+    s = d3.brushSelection(d3.select("#"+selectedBrush).node())
+    dat = {}
+    dat['site'] = $('select[name=site]').val();
+    dat['startDate'] = x.invert(s[0]);
+    dat['endDate'] = x.invert(s[1]);
+    dat['var'] = selectedBrush;
+    dat['flagid'] = $("select[name=flagID]").val();
+    dat['comment'] = $("input[name=fcomment]").val();
+    d3.select("."+selectedBrush).selectAll(".selected").classed("highlighted", function(d) {
+      is_brushed = dat['startDate'] <= d.date && d.date <= dat['endDate'];
+      return is_brushed;
+    });
+    $.ajax({
+      type: 'POST',
+      url:'/_addflag',
+      data: JSON.stringify(dat),
+      contentType: 'application/json;charset=UTF-8',
+      success: function(response){
+        console.log("success")
+        $("#alerts").append(alertbox('success','Added flag.'))
+      },
+      error: function(error){
+        console.log(error);
+      }
+    });
+    return false;
   })
 });
 

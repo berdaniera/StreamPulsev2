@@ -8,16 +8,17 @@
   <meta name="description" content="">
   <meta name="author" content="">
   <title>StreamPULSE - Log in</title>
-  <link href="https://fonts.googleapis.com/css?family=Roboto+Slab" rel="stylesheet">
+  <!-- jquery -->
+  <script src="https://code.jquery.com/jquery-3.1.1.js"></script>
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
   <style>
   body {
-    background: url(../static/img/bkgimg.jpg) no-repeat 50% 50% fixed;
+    /*background: url(../static/img/streambkg.jpg) no-repeat 50% 50% fixed;
     background-size: cover;
     -moz-background-size: cover;
     -o-background-size: cover;
-    -webkit-background-size: cover;
+    -webkit-background-size: cover;*/
     padding-top: 40px;
     padding-bottom: 40px;
   }
@@ -28,10 +29,24 @@
 
   <div class="container">
 
-    <div class='text-center' style="font-size:100px; color:#ffffff">StreamPULSE</div>
+    <div class='text-center' style="font-size:100px; color:#999999">StreamPULSE</div>
+
+    <div id="alerts">
+    {% with messages = get_flashed_messages(with_categories=True) %}
+    {% if messages %}
+      {% for category, message in messages %}
+      <div class="alert alert-dismissible {{category}}">
+        <button class="close" data-dismiss="alert" aria-label="close">&times;</button>
+        {{ message }}
+      </div>
+      {% endfor %}
+    {% endif %}
+    {% endwith %}
+    </div>
 
     <div class="row"><div class="col-md-6 col-md-offset-3">
       <form action="" method=post>
+        <div class="text-right"><a href="register">New? Register here.</a></div>
         <h3>Sign In</h3>
         <div class="form-group">
           <input type="text" id="username" name="username" class="form-control"
