@@ -13,20 +13,20 @@ import pandas as pd
 import numpy as np
 import requests
 import binascii
+import config as cfg
 import pysb
 import os
 import re
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = "insecure"
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:pass@localhost/sp'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['SECRET_KEY'] = cfg.SECRET_KEY
+app.config['SQLALCHEMY_DATABASE_URI'] = cfg.SQLALCHEMY_DATABASE_URI
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = cfg.SQLALCHEMY_TRACK_MODIFICATIONS
+app.config['UPLOAD_FOLDER'] = cfg.UPLOAD_FOLDER
 
+#sb.login(cfg.SB_USER,cfg.SB_PASS)
+#sbupf = sb.get_item(cfg.SB_UPFL)
 ########## DATABASE
-#sb = pysb.SbSession()
-#sb.login("abb30@duke.edu","BerdanierXpbrec1!")
-#sbupf = sb.get_item("58471447e4b0f34b016ff277")
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)

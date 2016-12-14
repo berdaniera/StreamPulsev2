@@ -3,3 +3,4 @@ spv2code
 *.pyc
 static/img/*
 spenv/*
+config*
