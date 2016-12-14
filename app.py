@@ -147,7 +147,7 @@ class User(db.Model):
         self.token = binascii.hexlify(os.urandom(10))
         self.email = email
         self.registered_on = datetime.utcnow()
-        self.confirmed = True
+        self.confirmed = True # do they agree to the policy?
         self.qaqc = ""
     def set_password(self, password):
         self.password = generate_password_hash(password)
