@@ -461,7 +461,8 @@ def upload():
             out_file = os.path.join(app.config['UPLOAD_FOLDER'],tmp_file+".csv")
             x.to_csv(out_file,index=False)
             columns = x.columns.tolist()
-            cdict = pd.read_sql("select * from cols where concat(region,'_',site)='"+site[0]+"'", db.engine)
+            rr,ss = site[0].split("_")
+            cdict = pd.read_sql("select * from cols where region='"+rr+"' and site='"+ss+"'", db.engine)
             cdict = dict(zip(cdict['rawcol'],cdict['dbcol']))
         except IOError:
             msg = Markup('Unknown error. Please <a href="mailto:aaron.berdanier@gmail.com" class="alert-link">email Aaron</a> with a copy of the file you tried to upload...')
@@ -534,15 +535,20 @@ def confirmcolumns():
     flash('Uploaded '+str(len(xx.index))+' values, thank you!','alert-success')
     return redirect(url_for('upload'))
 
+
+
 @app.route('/download')
 def download():
-    xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
-    sites = xx['sites'].tolist()
+    xx = pd.read_sql("select distinct region, site from data", db.engine)
+    sites = [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
+    # xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
+    # sites = xx['sites'].tolist()
     # check login status... allow download without login for certain sites.
     if current_user.is_authenticated:
         sites = sites
     else: # not logged in, filter sites
-        sitesopen = pd.read_sql("select concat(region,'_',site) as sites from site where embargo=0",db.engine)['sites'].tolist()
+        sitesopen = pd.read_sql("select distinct region, site from site where embargo=0",db.engine)
+        sitesopen = [x[0]+"_"+x[1] for x in zip(sitesopen.region,sitesopen.site)]
         sites = [s for s in sites if s in sitesopen]
     # sites = [(x.split("_")[0],x) for x in xx.sites.tolist()]
     # sitedict = {'0ALL':'ALL'}
@@ -589,8 +595,10 @@ def getcsv():
 @app.route('/visualize')
 @login_required
 def visualize():
-    xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
-    sites = xx['sites'].tolist()
+    # xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
+    # sites = xx['sites'].tolist()
+    xx = pd.read_sql("select distinct region, site from data", db.engine)
+    sites = [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
     return render_template('visualize.html',sites=sites)
 
 @app.route('/_getviz',methods=["POST"])
@@ -635,9 +643,10 @@ def getviz():
 @app.route('/clean')
 @login_required
 def qaqc():
-    xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
+    xx = pd.read_sql("select distinct region, site from data", db.engine)
+    sitesa = [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
     qaqcuser = current_user.qaqc_auth()
-    sites = [z for z in xx['sites'].tolist() if z in qaqcuser]
+    sites = [z for z in sitesa if z in qaqcuser]
     xx = pd.read_sql("select distinct flag from flag", db.engine)
     flags = xx['flag'].tolist()
     return render_template('qaqc.html',sites=sites,flags=flags, tags=[''])
