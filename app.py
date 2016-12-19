@@ -23,6 +23,7 @@ app.config['SECRET_KEY'] = cfg.SECRET_KEY
 app.config['SQLALCHEMY_DATABASE_URI'] = cfg.SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = cfg.SQLALCHEMY_TRACK_MODIFICATIONS
 app.config['UPLOAD_FOLDER'] = cfg.UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16 MB
 
 #sb.login(cfg.SB_USER,cfg.SB_PASS)
 #sbupf = sb.get_item(cfg.SB_UPFL)
