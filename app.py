@@ -210,8 +210,12 @@ variables = ['DateTime_UTC',
 'Nitrate_mgL',
 'SpecCond_mScm',
 'SpecCond_uScm',
-'Light_lux',
-'Light_PAR',
+'Light1_lux',
+'Light1_PAR',
+'Light2_lux',
+'Light2_PAR',
+'Light3_lux',
+'Light3_PAR',
 'CO2_ppm']
 
 # File uploading function
@@ -530,12 +534,14 @@ def confirmcolumns():
     flash('Uploaded '+str(len(xx.index))+' values, thank you!','alert-success')
     return redirect(url_for('upload'))
 
-# check login status...
 @app.route('/download')
-@login_required
 def download():
     xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
     sites = xx['sites'].tolist()
+    # check login status... allow download without login for certain sites.
+    if not current_user.is_authenticated(): # not logged in, filter sites
+        sitesopen = pd.read_sql("select concat(region,'_',site) as sites from site where embargo=0",db.engine)['sites'].tolist()
+        sites = [s for s in sites if s in sitesopen]
     # sites = [(x.split("_")[0],x) for x in xx.sites.tolist()]
     # sitedict = {'0ALL':'ALL'}
     # for x in sites:
