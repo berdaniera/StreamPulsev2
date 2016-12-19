@@ -188,24 +188,6 @@ def before_request():
 core = pd.read_csv('static/sitelist.csv')
 core['SITECD'] = list(core["REGIONID"].map(str) +"_"+ core["SITEID"])
 core = core.set_index('SITECD')
-core.head()
-
-# Get sunrise and sunset in UTC
-# ro = suns(datetime.now(), latitude=core.LAT[12],longitude=core.LNG[12])
-# rise_time, set_time = ro.calculate()
-# datetime.strftime(rise_time,"%Y-%m-%d %H:%M:%S")
-# datetime.strftime(set_time,"%Y-%m-%d %H:%M:%S")
-
-# Need to make pickl with dictionary for each site - cache values, update selected value
-# allsite = pd.read_csv("/home/aaron/spv2/static/SPsites.csv")
-# allsite.head()
-# # Save a dictionary into a pickle file.
-# import pickle
-# favorite_color = { "lion": "yellow", "kitty": "red" }
-# pickle.dump( favorite_color, open( "save.p", "wb" ) )
-# # reload it
-# favorite_color = pickle.load( open( "save.p", "rb" ) )
-
 
 variables = ['DateTime_UTC',
 'DO_mgL',
@@ -304,12 +286,6 @@ def load_multi_file(ff, gmtoff, logger):
         xx = load_file(f[0], gmtoff, logger)
     return wash_ts(xx)
 
-# gmtoff = -7
-# ff = ["/home/aaron/Downloads/AZ_OC_2016-11-14_EM.csv"]
-# xx = load_file(ff[0],gmtoff,re.sub("(.*_)(.*)\\..*", "\\2", ff[0]))
-# wash_ts(xx)
-# xx.head()
-
 # read and munge files for a site and date
 def sp_in(ff, gmtoff): # ff must be a list!!!
     if len(ff)==1: # only one file, load
@@ -328,7 +304,8 @@ def sp_in(ff, gmtoff): # ff must be a list!!!
 
 def sp_in_lev(ff):
     xx = pd.read_csv(ff)
-    return wash_ts(xx)
+    xx.ix[:,0] = [dtparse.parse(x) for x in xx.ix[:,0]]
+    return wash_ts(xx).reset_index()
 
 def wash_ts(x):
     cx = list(x.select_dtypes(include=['datetime64']).columns)[0]
@@ -337,6 +314,54 @@ def wash_ts(x):
     x = x.rename(columns={x.columns.tolist()[0]:'DateTime_UTC'})
     x = x.set_index("DateTime_UTC").sort_index().apply(lambda x: pd.to_numeric(x, errors='coerce')).resample('15Min').mean()
     return x
+
+def panda_usgs(x,jsof):
+    ts = jsof['value']['timeSeries'][x]
+    usgst = pd.read_json(json.dumps(ts['values'][0]['value']))
+    vcode = ts['variable']['variableCode'][0]['value']
+    if vcode=='00060': # discharge
+        usgst.value = usgst.value/35.3147
+        colnm = 'USGSDischarge_m3s'
+    else:
+        usgst.value = usgst.value/3.28084
+        colnm = 'USGSHeight_m'
+    usgst['site'] = ts['sourceInfo']['siteCode'][0]['value'] # site code
+    return {ts['sourceInfo']['siteCode'][0]['value']:usgst[['dateTime','value']].rename(columns={'dateTime':'DateTime_UTC','value':colnm}).set_index(["DateTime_UTC"])}
+
+def get_usgs(regionsite, startDate, endDate, vvv=['00060','00065']):
+    # regionsite is a list
+    # vvv is a list of variable codes
+    #00060 is cfs, discharge; 00065 is feet, height
+    xs = pd.read_sql("select * from site",db.engine)
+    xs['regionsite'] = xs["region"].map(str)+"_"+xs["site"]
+    # for each region site...
+    sitex = xs.loc[xs.regionsite.isin(regionsite)].usgs.tolist()
+    sitedict = dict(zip(sitex,regionsite))
+    sitex = [x for x in sitex if x is not None]
+    usgs = ",".join(sitex)
+    #lat,lng = sitex.loc[:,['latitude','longitude']].values.tolist()[0]
+    if(len(sitex)==0 or usgs is None):
+        return []
+    vcds = '00060,00065'#",".join(vvv)
+    url = "https://nwis.waterservices.usgs.gov/nwis/iv/?format=json&sites="+usgs+"&startDT="+startDate+"&endDT="+endDate+"&parameterCd="+vcds+"&siteStatus=all"
+    r = requests.get(url)
+    r.status_code
+    xf = r.json()
+    xx = map(lambda x: panda_usgs(x, xf), range(len(xf['value']['timeSeries'])))
+    xoo = []
+    for s in sitex:
+        x2 = [k.values()[0] for k in xx if k.keys()[0]==s]
+        x2 = reduce(lambda x,y: x.merge(y,how='outer',left_index=True,right_index=True), x2)
+        x2 = x2.sort_index().apply(lambda x: pd.to_numeric(x, errors='coerce')).resample('15Min').mean()
+        x2['site']=sitedict[s]
+        xoo.append(x2.reset_index())
+    xx = pd.concat(xoo)
+    xx = xx.set_index(['DateTime_UTC','site'])
+    xx.columns.name='variable'
+    xx = xx.stack()
+    xx.name="value"
+    xx = xx.reset_index()
+    return xx
 
 ########## PAGES
 @app.route('/register' , methods=['GET','POST'])
@@ -423,7 +448,11 @@ def upload():
                 gmtoff = core.loc[site].GMTOFF[0]
                 x = sp_in(fnlong, gmtoff)
             else:
-                x = sp_in_lev(fnlong)
+                if len(fnlong)>1:
+                    flash('Please merge your data prior to upload.','alert-danger')
+                    [os.remove(f) for f in fnlong]
+                    return redirect(request.url)
+                x = sp_in_lev(fnlong[0])
             tmp_file = site[0].encode('ascii')+"_"+binascii.hexlify(os.urandom(6))
             out_file = os.path.join(app.config['UPLOAD_FOLDER'],tmp_file+".csv")
             x.to_csv(out_file,index=False)
@@ -431,10 +460,14 @@ def upload():
             cdict = pd.read_sql("select * from cols where concat(region,'_',site)='"+site[0]+"'", db.engine)
             cdict = dict(zip(cdict['rawcol'],cdict['dbcol']))
         except IOError:
-            flash('Unknown error. Please email Aaron...','alert-danger')
+            msg = Markup('Unknown error. Please <a href="mailto:aaron.berdanier@gmail.com" class="alert-link">email Aaron</a> with a copy of the file you tried to upload...')
+            flash(msg,'alert-danger')
             [os.remove(f) for f in fnlong]
             return redirect(request.url)
-        return render_template('upload_columns.html', filenames=filenames, columns=columns, tmpfile=tmp_file, variables=variables, cdict=cdict)
+        # check if existing site
+        allsites = pd.read_sql("select concat(region,'_',site) as sitenm from site",db.engine).sitenm.tolist()
+        existing = True if site[0] in allsites else False
+        return render_template('upload_columns.html', filenames=filenames, columns=columns, tmpfile=tmp_file, variables=variables, cdict=cdict, existing=existing, sitenm=site[0])
     return render_template('upload.html')
 
 @app.route("/upload_cancel",methods=["POST"])
@@ -468,6 +501,16 @@ def confirmcolumns():
         xx = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'],tmpfile+".csv"), parse_dates=[0])
         xx = xx[cdict.keys()].rename(columns=cdict)
         region, site = tmpfile.split("_")[:-1]
+        # Add site if new site
+        if request.form['existing'] == "no":
+            # need to add site to list
+            embargo = False if request.form['policy']=="streampulse" else True
+            usgss = None if request.form['usgs']=="" else request.form['usgs']
+            sx = Site(region=region, site=site, name=request.form['sitename'],
+                latitude=request.form['lat'], longitude=request.form['lng'], usgs=usgss,
+                addDate=datetime.utcnow(), embargo=embargo, by=current_user.get_id())
+            db.session.add(sx)
+            db.session.commit()
         xx = xx.set_index("DateTime_UTC")
         xx.columns.name = 'variable'
         xx = xx.stack()
@@ -515,6 +558,7 @@ def getstats():
 @app.route('/_getcsv',methods=["POST"])
 def getcsv():
     sitenm = request.form['site'].split(",")
+    print sitenm
     startDate = request.form['startDate']#.split("T")[0]
     endDate = request.form['endDate']
     variables = request.form['variables'].split(",")
@@ -525,6 +569,10 @@ def getcsv():
     xx = pd.read_sql(sqlq, db.engine)
     xx.loc[xx.flag==0,"value"] = None # set NA values
     xx.drop(['id','flag'], axis=1, inplace=True)
+    if request.form.get('usgs') is not None:
+        xu = get_usgs(sitenm,startDate,endDate)
+        if len(xu) is not 0:
+            xx = pd.concat([xx,xu])
     resp = make_response(xx.to_csv(index=False))
     resp.headers["Content-Disposition"] = "attachment; filename=export.csv"
     resp.headers["Content-Type"] = "text/csv"
@@ -539,24 +587,42 @@ def visualize():
 
 @app.route('/_getviz',methods=["POST"])
 def getviz():
-    sitenm = request.json['site'].split(",")
+    region, site = request.json['site'].split(",")[0].split("_")
     startDate = request.json['startDate']
     endDate = request.json['endDate']#.split("T")[0]
     variables = request.json['variables']
-    print sitenm, startDate, endDate, variables
-    sqlq = "select * from data where concat(region,'_',site) in ('"+"', '".join(sitenm)+"') "+\
+    # print region, site, startDate, endDate, variables
+    sqlq = "select * from data where region='"+region+"' and site='"+site+"' "+\
         "and DateTime_UTC>'"+startDate+"' "+\
         "and DateTime_UTC<'"+endDate+"' "+\
         "and variable in ('"+"', '".join(variables)+"')"
     xx = pd.read_sql(sqlq, db.engine)
     xx.loc[xx.flag==0,"value"] = None # set NaNs
+    flagdat = xx[['DateTime_UTC','variable','flag']].dropna().drop(['flag'],axis=1).to_json(orient='records',date_format='iso') # flag data
     xx = xx.drop('id', axis=1).drop_duplicates()\
       .set_index(["DateTime_UTC","variable"])\
       .drop(['region','site','flag'],axis=1)\
       .unstack('variable')
     xx.columns = xx.columns.droplevel()
     xx = xx.reset_index()
-    return jsonify(variables=variables, dat=xx.to_json(orient='records',date_format='iso'))
+    # Get sunrise sunset data
+    sxx = pd.read_sql("select * from site where region='"+region+"' and site='"+site+"'",db.engine)
+    sdt = datetime.strptime(startDate,"%Y-%m-%d")
+    edt = datetime.strptime(endDate,"%Y-%m-%d")
+    ddt = edt-sdt
+    lat = sxx.latitude[0]
+    lng = sxx.longitude[0]
+    rss = []
+    for i in range(ddt.days + 1):
+        rise, sets = list(suns(sdt+timedelta(days=i-1), latitude=lat, longitude=lng).calculate())
+        if rise>sets:
+            sets = sets + timedelta(days=1) # account for UTC
+        rss.append([rise, sets])
+    #
+    rss = pd.DataFrame(rss, columns=("rise","set"))
+    rss.set = rss.set.shift(1)
+    sunriseset = rss.loc[1:].to_json(orient='records',date_format='iso')
+    return jsonify(variables=variables, dat=xx.to_json(orient='records',date_format='iso'), sunriseset=sunriseset, flagdat=flagdat)
 
 @app.route('/clean')
 @login_required
@@ -566,15 +632,16 @@ def qaqc():
     sites = [z for z in xx['sites'].tolist() if z in qaqcuser]
     xx = pd.read_sql("select distinct flag from flag", db.engine)
     flags = xx['flag'].tolist()
-    return render_template('qaqc.html',sites=sites,flags=flags)
+    return render_template('qaqc.html',sites=sites,flags=flags, tags=[''])
 
 @app.route('/_getqaqc',methods=["POST"])
 def getqaqc():
-    sitenm = request.json['site']
-    sqlq = "select * from data where concat(region,'_',site) = '"+sitenm+"'"
+    region, site = request.json['site'].split(",")[0].split("_")
+    sqlq = "select * from data where region='"+region+"' and site='"+site+"'"
     xx = pd.read_sql(sqlq, db.engine)
     xx.loc[xx.flag==0,"value"] = None # set NaNs
-    xx.dropna(subset=['value'], inplace=True) # remove rows with NA value
+    flagdat = xx[['DateTime_UTC','variable','flag']].dropna().drop(['flag'],axis=1).to_json(orient='records',date_format='iso') # flag data
+    #xx.dropna(subset=['value'], inplace=True) # remove rows with NA value
     variables = list(set(xx['variable'].tolist()))
     xx = xx.drop('id', axis=1).drop_duplicates()\
       .set_index(["DateTime_UTC","variable"])\
@@ -582,7 +649,24 @@ def getqaqc():
       .unstack('variable')
     xx.columns = xx.columns.droplevel()
     xx = xx.reset_index()
-    return jsonify(variables=variables, dat=xx.to_json(orient='records',date_format='iso'))
+    # Get sunrise sunset data
+    sxx = pd.read_sql("select * from site where region='"+region+"' and site='"+site+"'",db.engine)
+    sdt = min(xx.DateTime_UTC).replace(hour=0, minute=0,second=0,microsecond=0)
+    edt = max(xx.DateTime_UTC).replace(hour=0, minute=0,second=0,microsecond=0)+timedelta(days=1)
+    ddt = edt-sdt
+    lat = sxx.latitude[0]
+    lng = sxx.longitude[0]
+    rss = []
+    for i in range(ddt.days + 1):
+        rise, sets = list(suns(sdt+timedelta(days=i-1), latitude=lat, longitude=lng).calculate())
+        if rise>sets:
+            sets = sets + timedelta(days=1) # account for UTC
+        rss.append([rise, sets])
+    #
+    rss = pd.DataFrame(rss, columns=("rise","set"))
+    rss.set = rss.set.shift(1)
+    sunriseset = rss.loc[1:].to_json(orient='records',date_format='iso')
+    return jsonify(variables=variables, dat=xx.to_json(orient='records',date_format='iso'), sunriseset=sunriseset, flagdat=flagdat)
 
 @app.route('/_addflag',methods=["POST"])
 def addflag():
@@ -592,13 +676,14 @@ def addflag():
     var = request.json['var']
     flg = request.json['flagid']
     cmt = request.json['comment']
-    fff = Flag(rgn, ste, sdt, edt, var, flg, cmt, int(current_user.get_id()))
-    db.session.add(fff)
-    db.session.commit()
-    flgdat = Data.query.filter(Data.region==rgn,Data.site==ste,Data.DateTime_UTC>=sdt,Data.DateTime_UTC<=edt,Data.variable==var).all()
-    for f in flgdat:
-        f.flag = fff.id
-    db.session.commit()
+    for vv in var:
+        fff = Flag(rgn, ste, sdt, edt, vv, flg, cmt, int(current_user.get_id()))
+        db.session.add(fff)
+        db.session.commit()
+        flgdat = Data.query.filter(Data.region==rgn, Data.site==ste, Data.DateTime_UTC>=sdt, Data.DateTime_UTC<=edt, Data.variable==vv).all()
+        for f in flgdat:
+            f.flag = fff.id
+        db.session.commit()
     return jsonify(result="success")
 
 @app.route('/_addtag',methods=["POST"])
@@ -609,9 +694,10 @@ def addtag():
     var = request.json['var']
     tag = request.json['tagid']
     cmt = request.json['comment']
-    ttt = Tag(rgn, ste, sdt, edt, var, tag, cmt, int(current_user.get_id()))
-    db.session.add(ttt)
-    db.session.commit()
+    for vv in var:
+        ttt = Tag(rgn, ste, sdt, edt, vv, tag, cmt, int(current_user.get_id()))
+        db.session.add(ttt)
+        db.session.commit()
     # flgdat = Data.query.filter(Data.region==rgn,Data.site==ste,Data.DateTime_UTC>=sdt,Data.DateTime_UTC<=edt,Data.variable==var).all()
     # for f in flgdat:
     #     f.flag = fff.id
@@ -630,7 +716,7 @@ def addna():
         f.flag = 0
     db.session.commit()
     # new query
-    sqlq = "select * from data where concat(region,'_',site) = '"+rgn+"_"+ste+"'"
+    sqlq = "select * from data where region='"+rgn+"' and site='"+ste+"'"
     xx = pd.read_sql(sqlq, db.engine)
     xx.loc[xx.flag==0,"value"] = None # set NaNs
     xx.dropna(subset=['value'], inplace=True) # remove rows with NA value

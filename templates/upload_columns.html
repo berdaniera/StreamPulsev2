@@ -1,15 +1,52 @@
 {% extends "layout.html" %}
 {% block body %}
 
-<p><i>Uploading {{filenames|length}} files:</i><br>
-{% for f in filenames %} {{f}} {% endfor %}</p>
+<form id="choosecolumns" class="form-horizontal" method="POST" action="/upload_confirm">
 
-<p>Match <u>your columns (on the left)</u> with the <u>database variables (in the dropdown)</u>. To exclude a column, leave the dropdown blank. The dropdowns will automatically populate with your last selection.</p>
-<p><b>Please double check your column specifications!</b> If you duplicate variables in the dropdowns our database will consider those columns as the same variable (and average them by date).</p>
+  <div class="row"><div class="col-md-8 col-md-offset-2">
 
-<div class="row"><div class="col-md-6 col-md-offset-3">
-  <p class="text-right">Don't see your variables? <a href="mailto:aaron.berdanier@gmail.com">Send us an email!</a></p>
-  <form id="choosecolumns" class="form-horizontal" method="POST" action="/upload_confirm">
+  <p><i>Uploading {{filenames|length}} files:</i><br>
+  {% for f in filenames %} {{f}} {% endfor %}</p>
+
+  {% if existing %}
+    <input type="hidden" name="existing" value="yes">
+  {% else %}
+    <p class="lead">{{sitenm}} looks like a new site...
+      We need to get some more information before we can process it (you only need to do this part once):</p>
+    <div class="input-group input-group-sm">
+      <span class="input-group-addon">Full site name</span>
+      <input type="text" class="form-control" name="sitename" aria-describedby="Site name">
+    </div><br>
+    <i>Coordinates, decimal degrees:</i>
+    <div class="input-group input-group-sm">
+      <span class="input-group-addon">Latitude</span>
+      <input type="text" class="form-control" name="lat" placeholder="e.g., 36.00" aria-describedby="Latitude">
+      <span class="input-group-addon">Longitude</span>
+      <input type="text" class="form-control" name="lng" placeholder="e.g., -78.97" aria-describedby="Longitude">
+    </div><br>
+    <div class="input-group input-group-sm">
+      <span class="input-group-addon">Associated USGS gauge ID</span>
+      <input type="text" class="form-control" name="usgs" placeholder="Site ID (if none, leave blank), e.g., 02085000" aria-describedby="USGS site #">
+    </div><br>
+    <i>Data sharing policy:</i>
+    <div class="radio"><label>
+      <input type="radio" name="policy" id="streampulse" value="streampulse" checked> <u>StreamPULSE open data license</u>:
+        Others will be free to publicly share (copy, distribute, and use), create (produce works), and adapt (modify, transform, and build upon) this data with attribution given to the StreamPULSE project.
+    </label></div>
+    <div class="radio"><label>
+      <input type="radio" name="policy" id="embargo" value="embargo"> <u>Embargoed data license</u>:
+        This data will remain private (not publicly shared online or with other StreamPULSE members) for two years from the upload date (today). After two years, the embargo will lift and the StreamPULSE open data license will take effect.
+    </label></div>
+    <input type="hidden" name="existing" value="no">
+    <br><hr>
+  {% endif %}
+
+  <p class="lead">Variable matching</p>
+  <p>Match <u>your columns (on the left)</u> with the <u>database variables (in the dropdown)</u>. To exclude a column, leave the dropdown blank. The dropdowns will automatically populate with your last selection.</p>
+  <p><b>Please double check your column specifications!</b> If you duplicate variables in the dropdowns our database will consider those columns as the same variable (and average them by date).</p>
+  </div></div>
+  <div class="row"><div class="col-md-6 col-md-offset-3">
+    <p class="text-right">Don't see your variables? <a href="mailto:aaron.berdanier@gmail.com">Send us an email!</a></p>
     <input type="hidden" name="tmpfile" value="{{tmpfile}}">
     <input type="hidden" name="cdict" value="">
     {% for c in columns %}
@@ -34,7 +71,10 @@
     </div><br>
     {% endfor %}
     <button name="columnin" type="submit" class="btn btn-primary btn-block">Submit</button>
-  </form>
+  </div></div>
+</form>
+<br>
+<div class="row"><div class="col-md-6 col-md-offset-3">
   <form id="cancelcols" class="form-horizontal" method="POST" action="/upload_cancel">
     <input type="hidden" name="ofiles" value="{{ filenames|join(',') }}">
     <input type="hidden" name="tmpfile" value="{{tmpfile}}">

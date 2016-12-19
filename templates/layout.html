@@ -27,7 +27,7 @@
   <!-- fontawesome -->
   <script src="https://use.fontawesome.com/7cd26e4f50.js"></script>
   <style>
-  #dnldspecs, #vizspecs, #qaqcspecs, #flagging { display: none; }
+  #dnldspecs, #vizspecs, #qaqcspecs, #flagging, #graphcontrol, #newsite { display: none; }
   /*body { font: 11px sans-serif; }*/
   .axis path,
   .axis line {
@@ -45,7 +45,7 @@
     stroke: none;
   }
   .vdot{
-    fill: black;
+    fill: rgba(0,0,0,0.5);
     stroke: none;
   }
   .selected {
@@ -59,13 +59,20 @@
     stroke-width: 2px;
   }
   .outside {
-    stroke: none;
-    fill: none;
+    stroke: none !important;
+    fill: none !important;
   }
   .naval {
     fill: none;
     stroke: #aaaaaa;
   }
+  .flagdot {
+    fill: orange;
+    stroke: rgba(0,0,0,0.5);
+    stroke-width: 0.5px;
+  }
+  .sunriseset { fill: rgba(0,0,0,0.25); }
+  .backarea { fill: rgba(255,102,178,0.33); }
   </style>
 </head>
 <body>
