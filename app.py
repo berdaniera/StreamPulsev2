@@ -200,24 +200,22 @@ variables = ['DateTime_UTC',
 'AirPres_kPa',
 'Depth_m',
 'Discharge_m3s',
-'Discharge_f3s',
 'Velocity_ms',
 'pH',
-'CDOM_ugL',
+'fDOM_ppbQSE',
 'fDOM_mV',
-'fDOM_frac',
-'Turbidity_mV',
 'Turbidity_NTU',
+'Turbidity_mV',
 'Nitrate_mgL',
 'SpecCond_mScm',
 'SpecCond_uScm',
+'CO2_ppm',
 'Light_lux',
 'Light_PAR',
 'Light2_lux',
 'Light2_PAR',
 'Light3_lux',
-'Light3_PAR',
-'CO2_ppm']
+'Light3_PAR']
 
 # File uploading function
 ALLOWED_EXTENSIONS = set(['txt', 'dat', 'csv'])
@@ -278,7 +276,7 @@ def load_file(f, gmtoff, logger):
     elif logger=="EM":
         return read_manta(f, gmtoff)
     else:
-        xtmp = pd.read_csv(f)
+        xtmp = pd.read_csv(f,parse_dates=[0])
         xtmp = xtmp.rename(columns={xtmp.columns.values[0]:'DateTimeUTC'})
         return xtmp
 
