@@ -404,10 +404,9 @@ def logout():
 @app.route('/')
 @app.route('/index')
 def index():
-    nobs = pd.read_sql("select region, site, count(id) as n from data group by region, site", db.engine)
     nuse = pd.read_sql("select count(id) as n from user", db.engine)
     nobs = pd.read_sql("select count(id) as n from data", db.engine)
-    return render_template('index.html',nobs="{:,}".format(nobs.n.sum()),nuse=nuse.n[0],nmod=0)
+    return render_template('index.html',nobs=nobs.n[0],nuse=nuse.n[0],nmod=0)
 
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
