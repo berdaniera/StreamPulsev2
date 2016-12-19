@@ -539,7 +539,9 @@ def download():
     xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
     sites = xx['sites'].tolist()
     # check login status... allow download without login for certain sites.
-    if not current_user.is_authenticated(): # not logged in, filter sites
+    if current_user.is_authenticated:
+        sites = sites
+    else: # not logged in, filter sites
         sitesopen = pd.read_sql("select concat(region,'_',site) as sites from site where embargo=0",db.engine)['sites'].tolist()
         sites = [s for s in sites if s in sitesopen]
     # sites = [(x.split("_")[0],x) for x in xx.sites.tolist()]
