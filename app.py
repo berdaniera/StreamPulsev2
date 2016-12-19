@@ -569,8 +569,8 @@ def getstats():
 
 @app.route('/_getcsv',methods=["POST"])
 def getcsv():
+    print request.form
     sitenm = request.form['site'].split(",")
-    print sitenm
     startDate = request.form['startDate']#.split("T")[0]
     endDate = request.form['endDate']
     variables = request.form['variables'].split(",")
@@ -580,11 +580,20 @@ def getcsv():
         "and variable in ('"+"', '".join(variables)+"')"
     xx = pd.read_sql(sqlq, db.engine)
     xx.loc[xx.flag==0,"value"] = None # set NA values
-    xx.drop(['id','flag'], axis=1, inplace=True)
+    if request.form.get('flag') is not None:
+        xx.drop(['id'], axis=1, inplace=True) # keep the flags
+    else:
+        xx.drop(['id','flag'], axis=1, inplace=True) # get rid of them
     if request.form.get('usgs') is not None:
         xu = get_usgs(sitenm,startDate,endDate)
         if len(xu) is not 0:
             xx = pd.concat([xx,xu])
+    aggregate = request.form['aggregate']
+    dataform = request.form['dataform'] # wide or long
+    if aggregate!="none":
+        xx = xx.set_index(['DateTime_UTC']).groupby(['region','site','variable']).resample(aggregate).mean().reset_index()
+    if dataform=="wide":
+        xx = xx.pivot_table("value",['region','site','DateTime_UTC'],'variable').reset_index()
     resp = make_response(xx.to_csv(index=False))
     resp.headers["Content-Disposition"] = "attachment; filename=export.csv"
     resp.headers["Content-Type"] = "text/csv"

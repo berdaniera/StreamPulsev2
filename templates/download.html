@@ -24,7 +24,7 @@
 
 <div class="row" id="dnldspecs"><div class="col-md-6 col-md-offset-3">
   <form id="dnld_specs" action="/_getcsv" method="POST" class="form-horizontal">
-    Choose dates:<br>
+    <p class="lead">Dates:</p>
     <input type="hidden" name="site" value="">
     <input type="hidden" name="variables" value="">
     <div class="input-daterange input-group" id="datepicker">
@@ -32,12 +32,31 @@
         <span class="input-group-addon">to</span>
         <input type="text" id="endDate" class="input-sm form-control" name="endDate" data-date-format="YYYY-MM-DD"/>
     </div><br>
-    Select variables:<br>
+    <p class="lead">Variables:</p>
     <div id="dnld_vars"></div><br>
     <div class="form-inline">
+      Include data flags: <input type="checkbox" id="flag" name="flag"> &nbsp; <small class="form-text text-muted">Unavailable if reformatting data.</small>
+      <br>
       Include local USGS discharge and depth values: <input type="checkbox" name="usgs"><br>
       <small class="form-text text-muted">Note: this feature can add considerable time for long timeseries due to querying the USGS server.</small>
     </div><br>
+
+    <p class="lead">Formatting:</p>
+    <div class="form-inline">
+      Temporal aggregation:
+      <select id="aggregate" name="aggregate" class="form-control">
+        <option value="none" selected>15 minutes (default)</option>
+        <option value="H">1 hour</option>
+        <option value="D">1 day</option>
+      </select>
+      <br>
+      Data format:
+      <select id="dataform" name="dataform" class="form-control">
+        <option value="long" selected>Long</option>
+        <option value="wide">Wide</option>
+      </select> &nbsp; <a href="https://en.wikipedia.org/wiki/Wide_and_narrow_data" target="_new"><i class="fa fa-question-circle-o"></i></a>
+    </div><br>
+
     <button id="getcsv" type="submit" value=Download class="btn btn-primary btn-block">Download</button>
   </form>
 </div></div>
@@ -69,8 +88,8 @@ $(function(){
         $('#startDate').val(response.startDate);
         $('#endDate').val(response.endDate);
         $('#dnldspecs input[name=site]').val(response.site);
-        var i;
-        for (i = 0; i < response.variables.length; ++i) {
+        $("#dnld_vars").empty();
+        for (var i = 0; i < response.variables.length; ++i) {
             $('#dnld_vars').append('<input type="checkbox" id="variables" value="'+response.variables[i]+'" checked> '+response.variables[i]+'<br>');
         }
       },
@@ -84,9 +103,33 @@ $(function(){
 
 $(function(){
   $("#getcsv").click(function(){
-    $('#dnldspecs input[name=variables]').val( $('input:checkbox:checked').map(function() { return this.value; }).get() );
+    $('#dnldspecs input[name=variables]').val( $('#variables:checked').map(function() { return this.value; }).get() );
   })
 });
+
+$(function(){
+  $("#aggregate").change(function(){
+    $('#flag').prop('checked', false);
+    if(this.value=="none" && $("#dataform").val()=='long'){
+      $('#flag').attr("disabled", false);
+    }else{
+      $('#flag').attr("disabled", true);
+    };
+  })
+});
+
+$(function(){
+  $("#dataform").change(function(){
+    $('#flag').prop('checked', false);
+    if(this.value=="long" && $("#aggregate").val()=='none'){
+      $('#flag').attr("disabled", false);
+    }else{
+      $('#flag').attr("disabled", true);
+    };
+  })
+});
+
+
 </script>
 
 {% endblock %}
