@@ -403,16 +403,20 @@ def logout():
 @app.route('/index')
 def index():
     nuse = pd.read_sql("select count(id) as n from user", db.engine)
+    nobs = pd.read_sql("select count(id) as n from data", db.engine)
+    return render_template('index.html',nobs="{:,}".format(nobs.n.sum()),nuse=nuse.n[0],nmod=0)
+
+@app.route('/analytics')
+def analytics():
     ss = pd.read_sql_table('site',db.engine).set_index(['site','region'])
     xx = pd.read_sql_table('data',db.engine)
     xx = pd.DataFrame(xx.groupby(['site','region']).value.count())
-    nobs = xx.values.sum()
     res = xx.merge(ss,"outer",left_index=True,right_index=True)
     res = res.reset_index()
     res = res[['region','site','name','latitude','longitude','value']]
     res = res.rename(columns={'region':'Region','site':'Site','name':'Name','latitude':'Latitude','longitude':'Longitude','value':'Observations'}).fillna(0).sort(['Observations','Longitude'],ascending=False)
     res.Observations = res.Observations.astype(int)
-    return render_template('index.html',nobs="{:,}".format(nobs),nuse=nuse.n[0],nmod=0,dats=Markup(res.to_html(index=False,classes=['table','table-condensed'])))
+    return render_template('analytics.html',dats=Markup(res.to_html(index=False,classes=['table','table-condensed'])))
 
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
