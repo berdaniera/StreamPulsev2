@@ -548,7 +548,10 @@ def confirmcolumns():
     flash('Uploaded '+str(len(xx.index))+' values, thank you!','alert-success')
     return redirect(url_for('upload'))
 
-
+def getsitenames(regionsite):
+    region, site = regionsite.split("_")
+    names = pd.read_sql("select name from site where region='"+region+"' and site ='"+site+"'", db.engine)
+    return (regionsite, region+" - "+names.name[0])
 
 @app.route('/download')
 def download():
@@ -569,7 +572,8 @@ def download():
     #     if x[0] not in sitedict:
     #         sitedict[x[0]] = []
     #     sitedict[x[0]].append(x[1])
-    return render_template('download.html',sites=sites)
+    sitedict = sorted([getsitenames(x) for x in sites], key=lambda tup: tup[1])
+    return render_template('download.html',sites=sitedict)
 
 @app.route('/_getstats',methods=['POST'])
 def getstats():
@@ -621,7 +625,8 @@ def visualize():
     # sites = xx['sites'].tolist()
     xx = pd.read_sql("select distinct region, site from data", db.engine)
     sites = [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
-    return render_template('visualize.html',sites=sites)
+    sitedict = sorted([getsitenames(x) for x in sites], key=lambda tup: tup[1])
+    return render_template('visualize.html',sites=sitedict)
 
 @app.route('/_getviz',methods=["POST"])
 def getviz():
@@ -671,7 +676,8 @@ def qaqc():
     sites = [z for z in sitesa if z in qaqcuser]
     xx = pd.read_sql("select distinct flag from flag", db.engine)
     flags = xx['flag'].tolist()
-    return render_template('qaqc.html',sites=sites,flags=flags, tags=[''])
+    sitedict = sorted([getsitenames(x) for x in sites], key=lambda tup: tup[1])
+    return render_template('qaqc.html',sites=sitedict,flags=flags, tags=[''])
 
 @app.route('/_getqaqc',methods=["POST"])
 def getqaqc():

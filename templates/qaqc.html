@@ -9,8 +9,8 @@
     <div class="col-md-8">
       <select placeholder="Choose a site" id="dsite" name="site">
         <option value="">Choose a site</option>
-        {% for s in sites %}
-        <option value="{{s}}">{{s}}</option>
+        {% for sv, sn in sites %}
+        <option value="{{sv}}">{{sn}}</option>
         {% endfor %}
       </select>
     </div>
