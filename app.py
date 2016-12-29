@@ -202,8 +202,9 @@ variables = ['DateTime_UTC',
 'Discharge_m3s',
 'Velocity_ms',
 'pH',
-'fDOM_ppbQSE',
-'fDOM_mV',
+'pH_mV',
+'CDOM_ppb',
+'CDOM_mV',
 'Turbidity_NTU',
 'Turbidity_mV',
 'Nitrate_mgL',
@@ -215,7 +216,8 @@ variables = ['DateTime_UTC',
 'Light2_lux',
 'Light2_PAR',
 'Light3_lux',
-'Light3_PAR']
+'Light3_PAR',
+'Battery_V']
 
 # File uploading function
 ALLOWED_EXTENSIONS = set(['txt', 'dat', 'csv'])
