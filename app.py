@@ -531,6 +531,7 @@ def confirmcolumns():
         xx = xx.stack()
         xx.name="value"
         xx = xx.reset_index()
+        xx = xx.groupby(['DateTime_UTC','variable']).mean().reset_index() # average duplicates
         xx['region'] = region
         xx['site'] = site
         xx['flag'] = None

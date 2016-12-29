@@ -54,6 +54,7 @@
       <span class="input-group-addon">{{c}}</span>
       <select class="form-control" name="{{c}}">
         {% if c in cdict.keys() %}
+          <option value=""></option>
           {% for v in variables %}
             {% if v == cdict[c] %}
             <option value="{{v}}" selected>{{v}}</option>
@@ -62,7 +63,7 @@
             {% endif %}
           {% endfor %}
         {% else %}
-          <option selected disabled value></option>
+          <option selected value=""></option>
           {% for v in variables %}
           <option value="{{v}}">{{v}}</option>
           {% endfor %}
@@ -93,7 +94,14 @@ function alertbox(alrt,msg){
 }
 $(function(){
   $('button[name=columnin]').click(function() {
-    cdict = JSON.stringify($("#choosecolumns").find("select").serializeArray());
+    cvals = [];
+    $("#choosecolumns").find("select").each(function(){
+      if($(this).val()!=""){
+        cvals.push( $(this).serializeArray()[0] )
+      }
+    });
+    //cdict = JSON.stringify($("#choosecolumns").find("select").serializeArray());
+    cdict = JSON.stringify(cvals);
     $('#choosecolumns input[name=cdict]').val( cdict );
   });
 })
