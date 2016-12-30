@@ -849,10 +849,10 @@ def api():
         flags = pd.read_sql(fsql, db.engine)
         flags.drop(['by'], axis=1, inplace=True)
         xx.drop(['id'], axis=1, inplace=True)
-        resp = jsonify(data=xx.to_json(orient='records'),sites=meta.to_json(orient='records'),flags=flags.to_json(orient='records'))
+        resp = jsonify(data=xx.to_dict(orient='records'),sites=meta.to_dict(orient='records'),flags=flags.to_dict(orient='records'))
     else:
         xx.drop(['id','flag'], axis=1, inplace=True)
-        resp = jsonify(data=xx.to_json(orient='records'),sites=meta.to_json(orient='records'))
+        resp = jsonify(data=xx.to_dict(orient='records'),sites=meta.to_dict(orient='records'))
     return resp
 
 # jj = '{"data":'+xx.to_json(orient='records')+',"sites":'+meta.to_json(orient='records')+ff+'}'
