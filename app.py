@@ -848,17 +848,18 @@ def api():
             fsql = fsql+"and variable in ('"+"', '".join(vvv)+"')"
         flags = pd.read_sql(fsql, db.engine)
         flags.drop(['by'], axis=1, inplace=True)
-        ff = ',"flags":'+flags.to_json(orient='records')
         xx.drop(['id'], axis=1, inplace=True)
+        resp = jsonify(data=xx.to_json(orient='records'),sites=meta.to_json(orient='records'),flags=flags.to_json(orient='records'))
     else:
-        ff = ''
         xx.drop(['id','flag'], axis=1, inplace=True)
-    # create JSON string
-    jj = '{"data":'+xx.to_json(orient='records')+',"sites":'+meta.to_json(orient='records')+ff+'}'
-    resp = make_response(jj)
-    resp.status_code = 200
-    resp.headers["Content-Type"] = "text/csv"
+        resp = jsonify(data=xx.to_json(orient='records'),sites=meta.to_json(orient='records'))
     return resp
+
+# jj = '{"data":'+xx.to_json(orient='records')+',"sites":'+meta.to_json(orient='records')+ff+'}'
+# resp = make_response(jj)
+# resp.status_code = 200
+# resp.headers["Content-Type"] = "text/csv"
+# return resp
 
 if __name__=='__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
