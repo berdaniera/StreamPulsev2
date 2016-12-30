@@ -154,6 +154,10 @@
 
   <div class="container">
 
+  <div id="loading"><span id="loading-image">
+    <i class="fa fa-circle-o-notch fa-spin fa-5x fa-fw"></i><span class="sr-only">Loading...</span>
+  </span></div>
+
   <div id="alerts">
   {% with messages = get_flashed_messages(with_categories=True) %}
   {% if messages %}
@@ -170,6 +174,14 @@
   {% block body %}{% endblock %}
 
   </div>
+
+  <script>
+  $(function(){
+    $("a").click(function(){
+      $('#loading').show();
+    })
+  });
+  </script>
 
 </body>
 </html>

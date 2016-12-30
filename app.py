@@ -329,7 +329,7 @@ def panda_usgs(x,jsof):
         colnm = 'USGSDischarge_m3s'
     else:
         usgst.value = usgst.value/3.28084
-        colnm = 'USGSHeight_m'
+        colnm = 'USGSDepth_m'
     usgst['site'] = ts['sourceInfo']['siteCode'][0]['value'] # site code
     return {ts['sourceInfo']['siteCode'][0]['value']:usgst[['dateTime','value']].rename(columns={'dateTime':'DateTime_UTC','value':colnm}).set_index(["DateTime_UTC"])}
 
@@ -366,7 +366,25 @@ def get_usgs(regionsite, startDate, endDate, vvv=['00060','00065']):
     xx = xx.stack()
     xx.name="value"
     xx = xx.reset_index()
+    xx[['region','site']] = xx['site'].apply(lambda x: pd.Series(x.split("_")))
     return xx
+
+def authenticate_sites(sites,user=None,token=None):
+    ss = []
+    for site in sites:
+        r,s = site.split("_")
+        ss.append("(region='"+r+"' and site='"+s+"') ")
+    qs = "or ".join(ss)
+    xx = pd.read_sql("select region, site, embargo, site.by from site where "+qs, db.engine)
+    if token is not None:
+        tt = pd.read_sql("select * from user where token='"+token+"'", db.engine)
+        if(len(tt)==1):
+            user = str(tt.id[0])
+    if user is not None: # return public sites and authenticated sites
+        xx = xx[(xx['embargo']==0)|(xx['by']==int(user))]
+    else: # return only public sites
+        xx = xx[(xx['embargo']==0)] # return
+    return [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
 
 ########## PAGES
 @app.route('/register' , methods=['GET','POST'])
@@ -416,7 +434,7 @@ def analytics():
     res = xx.merge(ss,"outer",left_index=True,right_index=True)
     res = res.reset_index()
     res = res[['region','site','name','latitude','longitude','value']]
-    res = res.rename(columns={'region':'Region','site':'Site','name':'Name','latitude':'Latitude','longitude':'Longitude','value':'Observations'}).fillna(0).sort(['Observations','Longitude'],ascending=False)
+    res = res.rename(columns={'region':'Region','site':'Site','name':'Name','latitude':'Latitude','longitude':'Longitude','value':'Observations'}).fillna(0).sort_values(['Observations','Longitude'],ascending=False)
     res.Observations = res.Observations.astype(int)
     return render_template('analytics.html',dats=Markup(res.to_html(index=False,classes=['table','table-condensed'])))
 
@@ -561,11 +579,9 @@ def download():
     # sites = xx['sites'].tolist()
     # check login status... allow download without login for certain sites.
     if current_user.is_authenticated:
-        sites = sites
-    else: # not logged in, filter sites
-        sitesopen = pd.read_sql("select distinct region, site from site where embargo=0",db.engine)
-        sitesopen = [x[0]+"_"+x[1] for x in zip(sitesopen.region,sitesopen.site)]
-        sites = [s for s in sites if s in sitesopen]
+        sites = authenticate_sites(sites, user=current_user.get_id())
+    else:
+        sites = authenticate_sites(sites)
     # sites = [(x.split("_")[0],x) for x in xx.sites.tolist()]
     # sitedict = {'0ALL':'ALL'}
     # for x in sites:
@@ -588,7 +604,6 @@ def getstats():
 
 @app.route('/_getcsv',methods=["POST"])
 def getcsv():
-    print request.form
     sitenm = request.form['site'].split(",")
     startDate = request.form['startDate']#.split("T")[0]
     endDate = request.form['endDate']
@@ -599,6 +614,7 @@ def getcsv():
         "and variable in ('"+"', '".join(variables)+"')"
     xx = pd.read_sql(sqlq, db.engine)
     xx.loc[xx.flag==0,"value"] = None # set NA values
+    xx.dropna(subset=['value'], inplace=True) # remove rows with NA value
     if request.form.get('flag') is not None:
         xx.drop(['id'], axis=1, inplace=True) # keep the flags
     else:
@@ -625,6 +641,10 @@ def visualize():
     # sites = xx['sites'].tolist()
     xx = pd.read_sql("select distinct region, site from data", db.engine)
     sites = [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
+    if current_user.is_authenticated:
+        sites = authenticate_sites(sites, user=current_user.get_id())
+    else:
+        sites = authenticate_sites(sites)
     sitedict = sorted([getsitenames(x) for x in sites], key=lambda tup: tup[1])
     return render_template('visualize.html',sites=sitedict)
 
@@ -772,6 +792,63 @@ def addna():
     xx.columns = xx.columns.droplevel()
     xx = xx.reset_index()
     return jsonify(dat=xx.to_json(orient='records',date_format='iso'))
+
+@app.route('/api')
+def api():
+    sites = request.args['sitecode'].split(',')
+    if request.headers.get('Token') is not None:
+        sites = authenticate_sites(sites, token=request.headers['Token'])
+    elif current_user.is_authenticated:
+        sites = authenticate_sites(sites, user=current_user.get_id())
+    else:
+        sites = authenticate_sites(sites)
+    startDate = request.args['startdate']
+    endDate = request.args['enddate']
+    variables = request.args['variables'].split(',')
+    ss = []
+    for site in sites:
+        r,s = site.split("_")
+        ss.append("(region='"+r+"' and site='"+s+"') ")
+    qs = "or ".join(ss)
+    # META
+    meta = pd.read_sql("select region, site, name, latitude as lat, longitude as lon, usgs as usgsid from site where "+qs, db.engine)
+    # DATA
+    sqlq = "select * from data where "+qs+\
+        "and DateTime_UTC>'"+startDate+"' "+\
+        "and DateTime_UTC<'"+endDate+"' "+\
+        "and variable in ('"+"', '".join(variables)+"')"
+    xx = pd.read_sql(sqlq, db.engine)
+    vv = xx.variable.unique().tolist()
+    xx.loc[xx.flag==0,"value"] = None # set NA values
+    xx.dropna(subset=['value'], inplace=True) # remove rows with NA value
+    # check if we need to get USGS data - if depth requested but not available
+    xu = []
+    if "Discharge_m3s" in variables and "Discharge_m3s" not in vv:
+        xu = get_usgs(sites,startDate,endDate)
+    if "Depth_m" in variables and "Depth_m" not in vv and len(xu) is 0:
+        xu = get_usgs(sites,startDate,endDate)
+    if len(xu) is not 0:
+        # subset usgs data based on each sites' dates...
+        xx = pd.concat([xx,xu])
+    xx['DateTime_UTC'] = xx['DateTime_UTC'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
+    # FLAGS
+    if request.args.get('flags')=='true':
+        fsql = "select * from flag "+\
+            "where "+qs+\
+            "and startDate>'"+startDate+"' "+\
+            "and endDate<'"+endDate+"' "+\
+            "and variable in ('"+"', '".join(variables)+"')"
+        flags = pd.read_sql(fsql, db.engine)
+        flags.drop(['by'], axis=1, inplace=True)
+        ff = ',"flags":'+flags.to_json(orient='records')
+        xx.drop(['id'], axis=1, inplace=True)
+    else:
+        ff = ''
+        xx.drop(['id','flag'], axis=1, inplace=True)
+    # create JSON string
+    jj = '{"data":'+xx.to_json(orient='records')+',"sites":'+meta.to_json(orient='records')+ff+'}'
+    resp = make_response((jj,200))
+    return resp
 
 if __name__=='__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
