@@ -795,6 +795,9 @@ def addna():
 
 @app.route('/api')
 def api():
+    startDate = request.args.get('startdate')
+    endDate = request.args.get('enddate')
+    variables = reqest.args.get('variables')
     sites = request.args['sitecode'].split(',')
     if request.headers.get('Token') is not None:
         sites = authenticate_sites(sites, token=request.headers['Token'])
@@ -802,9 +805,6 @@ def api():
         sites = authenticate_sites(sites, user=current_user.get_id())
     else:
         sites = authenticate_sites(sites)
-    startDate = request.args['startdate']
-    endDate = request.args['enddate']
-    variables = request.args['variables'].split(',')
     ss = []
     for site in sites:
         r,s = site.split("_")
@@ -813,10 +813,14 @@ def api():
     # META
     meta = pd.read_sql("select region, site, name, latitude as lat, longitude as lon, usgs as usgsid from site where "+qs, db.engine)
     # DATA
-    sqlq = "select * from data where "+qs+\
-        "and DateTime_UTC>'"+startDate+"' "+\
-        "and DateTime_UTC<'"+endDate+"' "+\
-        "and variable in ('"+"', '".join(variables)+"')"
+    sqlq = "select * from data where "+qs
+    if startDate is not None:
+        sqlq = sqlq+"and DateTime_UTC>'"+startDate+"' "
+    if endDate is not None:
+        sqlq = sqlq+"and DateTime_UTC<'"+endDate+"' "
+    if variables is not None:
+        vvv = variables.split(",")
+        sqlq = sqlq+"and variable in ('"+"', '".join(vvv)+"')"
     xx = pd.read_sql(sqlq, db.engine)
     vv = xx.variable.unique().tolist()
     xx.loc[xx.flag==0,"value"] = None # set NA values
@@ -833,11 +837,14 @@ def api():
     xx['DateTime_UTC'] = xx['DateTime_UTC'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
     # FLAGS
     if request.args.get('flags')=='true':
-        fsql = "select * from flag "+\
-            "where "+qs+\
-            "and startDate>'"+startDate+"' "+\
-            "and endDate<'"+endDate+"' "+\
-            "and variable in ('"+"', '".join(variables)+"')"
+        fsql = "select * from flag where "+qs
+        if startDate is not None:
+            fsql = fsql+"and startDate>'"+startDate+"' "
+        if endDate is not None:
+            fsql = fsql+"and endDate<'"+endDate+"' "
+        if variables is not None:
+            vvv = variables.split(",")
+            fsql = fsql+"and variable in ('"+"', '".join(vvv)+"')"
         flags = pd.read_sql(fsql, db.engine)
         flags.drop(['by'], axis=1, inplace=True)
         ff = ',"flags":'+flags.to_json(orient='records')
