@@ -630,7 +630,7 @@ def getcsv():
     if dataform=="wide":
         xx = xx.pivot_table("value",['region','site','DateTime_UTC'],'variable').reset_index()
     resp = make_response(xx.to_csv(index=False))
-    resp.headers["Content-Disposition"] = "attachment; filename=export.csv"
+    resp.headers["Content-Disposition"] = "attachment; filename=StreamPulseData.csv"
     resp.headers["Content-Type"] = "text/csv"
     return resp
 
@@ -854,7 +854,9 @@ def api():
         xx.drop(['id','flag'], axis=1, inplace=True)
     # create JSON string
     jj = '{"data":'+xx.to_json(orient='records')+',"sites":'+meta.to_json(orient='records')+ff+'}'
-    resp = make_response((jj,200))
+    resp = make_response(jj)
+    resp.status_code = 200
+    resp.headers["Content-Type"] = "text/csv"
     return resp
 
 if __name__=='__main__':
