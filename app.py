@@ -797,7 +797,7 @@ def addna():
 def api():
     startDate = request.args.get('startdate')
     endDate = request.args.get('enddate')
-    variables = reqest.args.get('variables')
+    variables = request.args.get('variables')
     sites = request.args['sitecode'].split(',')
     if request.headers.get('Token') is not None:
         sites = authenticate_sites(sites, token=request.headers['Token'])
