@@ -829,9 +829,9 @@ def api():
     xu = []
     if variables is not None:
         if "Discharge_m3s" in variables and "Discharge_m3s" not in vv:
-            xu = get_usgs(sites,startDate,endDate)
+            xu = get_usgs(sites, min(xx.DateTime_UTC).strftime("%Y-%m-%d"), max(xx.DateTime_UTC).strftime("%Y-%m-%d"))
         if "Depth_m" in variables and "Depth_m" not in vv and len(xu) is 0:
-            xu = get_usgs(sites,startDate,endDate)
+            xu = get_usgs(sites, min(xx.DateTime_UTC).strftime("%Y-%m-%d"), max(xx.DateTime_UTC).strftime("%Y-%m-%d"))
     if len(xu) is not 0:
         # subset usgs data based on each sites' dates...
         xx = pd.concat([xx,xu])
