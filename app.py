@@ -556,7 +556,7 @@ def confirmcolumns():
         xx['flag'] = None
         xx = xx[['region','site','DateTime_UTC','variable','value','flag']]
         # add a check for duplicates?
-        xx.to_sql("data", db.engine, if_exists='append', index=False)
+        xx.to_sql("data", db.engine, if_exists='append', index=False, chunksize=1000)
         updatecdict(region, site, cdict)
     except IOError:
         flash('There was an error, please try again.','alert-warning')
