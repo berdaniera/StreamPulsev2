@@ -278,7 +278,7 @@ def load_file(f, gmtoff, logger):
     elif logger=="EM":
         return read_manta(f, gmtoff)
     else:
-        xtmp = pd.read_csv(f,parse_dates=[0])
+        xtmp = pd.read_csv(f, parse_dates=[0])
         xtmp = xtmp.rename(columns={xtmp.columns.values[0]:'DateTimeUTC'})
         return xtmp
 
@@ -308,8 +308,7 @@ def sp_in(ff, gmtoff): # ff must be a list!!!
     return xx.reset_index()
 
 def sp_in_lev(ff):
-    xx = pd.read_csv(ff)
-    xx.ix[:,0] = [dtparse.parse(x) for x in xx.ix[:,0]]
+    xx = pd.read_csv(ff, parse_dates=[0])
     return wash_ts(xx).reset_index()
 
 def wash_ts(x):
