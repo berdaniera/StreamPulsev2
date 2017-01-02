@@ -870,7 +870,7 @@ def modelgen():
     qs = "or ".join(ss)
     nn = pd.read_sql("select region, site, name from site",db.engine)
     #dd = pd.read_sql("select region, site, min(DateTime_UTC) as startdate, max(DateTime_UTC) as enddate from data where "+qs+"group by region, site", db.engine)
-    dd = pd.read_sql("select region, site, DateTime_UTC from data",db.engine)
+    dd = pd.read_sql_table('data',db.engine)[['region','site','DateTime_UTC']]
     dd = pd.concat([dd.groupby(['region','site']).DateTime_UTC.min(),dd.groupby(['region','site']).DateTime_UTC.max()], axis=1)
     dd.columns = ['startdate','enddate']
     dd = dd.reset_index()
