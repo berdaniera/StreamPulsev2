@@ -1,0 +1,103 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<div class="row"><div class="col-md-10 col-md-offset-1">
+  <h1>Model builder</h1>
+  <p class="lead">Generate code for <i>streamMetabolizer</i> models here.<p>
+
+  <p><i>Copy-and-paste into R and let it run!</i> The <span class="rparam">pink options</span> in the code are options that you can change.
+    More options for different types of models are coming soon...</p><br>
+
+  <form id="modelgen">
+    <div class="col-md-6">
+      <select placeholder="Choose a site" id="dsite" name="site">
+        <option value="">Choose a site</option>
+        {% for sv, sn, sd, ed in sites %}
+        <option value="{{sv}}">{{sn}}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-6">
+      <input class="form-control" type="text" id="datepicker" name="daterange" value="" placeholder="Select date range">
+    </div>
+  </form>
+</div></div>
+<br>
+
+<div class="row"><div class="col-md-10 col-md-offset-1">
+<pre>
+<span class="rcmt"># You need to have an internet connection for this code to function.</span>
+<span class="rfn">library(</span>streamMetabolizer<span class="rfn">)</span>
+<span class="rfn">library(</span>devtools<span class="rfn">)</span>
+<span class="rcmt"># This sources our StreamPULSE functions from GitHub.</span>
+<span class="rfn">suppressMessages(source_gist(</span>"2626629e50d191394285a61a0c678779"<span class="rfn">))</span>
+
+{% if g.user.is_authenticated %}<span class="rcmt"># This is your personal api access token.</span>
+<span class="rcmt"># It grants you (and anyone you share it with) secure access to your restricted data, if applicable.</span>
+my_api_token <- "<span class="rparam">{{g.user.token}}</span>"
+
+{% endif %}<span class="rcmt"># Get StreamPULSE data for streamMetabolizer</span>
+fitdata <- <span class="rfn">sp_metab(</span>sitecode = <span class="rparam" id='site_code'>site_code</span>,
+    startdate = <span class="rparam" id='start_date'>start_date</span>,
+    enddate = <span class="rparam" id='end_date'>end_date</span>,
+    type = "mle",
+    token = <span class="rparam">{% if g.user.is_authenticated %}my_api_token{% else %}NULL{% endif %}</span><span class="rfn">)</span>
+<span class="rcmt"># If you omit the <i>token</i> option or use <i>token=NULL</i>, you will only be able to access publicly-available data.</span>
+
+<span class="rcmt"># streamMetabolizer functions</span>
+modname <- <span class="rfn">mm_name(</span>type = "mle"<span class="rfn">)</span>
+modspecs <- <span class="rfn">specs(</span>modname<span class="rfn">)</span>
+modfit <- <span class="rfn">metab(</span>specs = modspecs, data = fitdata<span class="rfn">)</span>
+
+<span class="rcmt"># Predictions</span>
+preds <- <span class="rfn">predict_metab(</span>modfit<span class="rfn">)</span>
+<span class="rfn">plot_metab_preds(</span>modfit<span class="rfn">)</span>
+
+dopreds <- <span class="rfn">predict_DO(</span>modfit<span class="rfn">)</span>
+<span class="rfn">plot_DO_preds(</span>modfit<span class="rfn">)</span>
+</pre>
+</div></div>
+
+<script>
+$('#dsite').selectize({
+    delimiter: ',',
+    persist: false,
+    create: function(input) {
+        return {
+            value: input,
+            text: input
+        }
+    }
+});
+
+var sitedict = {}
+{% for sv, sn, sd, ed in sites %}
+  sitedict['{{sv}}'] = ['{{sd}}','{{ed}}']
+{% endfor %}
+
+$('#dsite').change(function(){
+  //http://www.daterangepicker.com/
+  var sitedates = sitedict[$('select[name=site]').val()];
+  $('#datepicker').daterangepicker({
+    locale: {format: 'YYYY-MM-DD', separator: ' to '},
+    startDate: sitedates[0],
+    endDate: sitedates[1],
+    minDate: sitedates[0],
+    maxDate: sitedates[1],
+    autoApply: true,
+    opens: 'left'
+  });
+
+  $('#start_date').text( '"'+$("#datepicker").data('daterangepicker').startDate.format('YYYY-MM-DD')+'"' );
+  $('#end_date').text( '"'+$("#datepicker").data('daterangepicker').endDate.format('YYYY-MM-DD')+'"' );
+  $('#site_code').text( '"'+$('select[name=site]').val()+'"' );
+});
+
+$('#datepicker').on('apply.daterangepicker', function(ev, picker) {
+  $('#start_date').text( '"'+picker.startDate.format('YYYY-MM-DD')+'"' );
+  $('#end_date').text( '"'+picker.endDate.format('YYYY-MM-DD')+'"' );
+});
+
+</script>
+
+{% endblock %}

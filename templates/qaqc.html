@@ -48,8 +48,9 @@
 <div class="row">
   <div class="col-md-6">
     <div class="panel panel-default">
+      <div class="panel-heading"><span class="lead">Flags</span> &ndash; data that should be noted as a concern (sensor failure, fouling, etc.)</div>
       <div class="panel-body">
-        <select id="flags" placeholder="Choose (or enter) a flag ID" name="flagID">
+        <select id="flags" placeholder="Choose (or enter) a flag ID (alphanumeric with no spaces please)" name="flagID">
           <option value="">Choose (or enter) a flag ID</option>
           {% for f in flags %}
           <option value="{{f}}">{{f}}</option>
@@ -62,8 +63,9 @@
   </div>
   <div class="col-md-6">
     <div class="panel panel-default">
+      <div class="panel-heading"><span class="lead">Tags/notes</span> &ndash; interesting features in the data (storms, leaf drop, etc.)</div>
       <div class="panel-body">
-        <select id="tags" placeholder="Choose (or enter) a tag ID" name="tagID">
+        <select id="tags" placeholder="Choose (or enter) a tag ID (alphanumeric with no spaces please)" name="tagID">
           <option value="">Choose (or enter) a tag ID</option>
           {% for t in tags %}
           <option value="{{f}}">{{t}}</option>
@@ -169,98 +171,110 @@ function alertbox(alrt,msg){
 
 $(function(){
   $("#addna").click(function(){
-    s = d3.brushSelection(d3.select("#"+selectedBrush).node())
-    dat = {}
-    dat['site'] = $('select[name=site]').val();
-    dat['startDate'] = x.invert(s[0]);
-    dat['endDate'] = x.invert(s[1]);
-    dat['var'] = selectedBrush;
-    $.ajax({
-      type: 'POST',
-      url:'/_addna',
-      data: JSON.stringify(dat),
-      contentType: 'application/json;charset=UTF-8',
-      success: function(response){
-        console.log("success")
-        $("#alerts").append(alertbox('success','Added NA values.'))
-        datna = JSON.parse(response.dat);
-        redrawPoints(zoom_in=false)
-      },
-      error: function(error){
-        console.log(error);
-      }
-    });
-    return false;
+    if (undefined != selectedBrush){ // only do this if there is a brush selected
+      s = d3.brushSelection(d3.select("#"+selectedBrush).node())
+      dat = {}
+      dat['site'] = $('select[name=site]').val();
+      dat['startDate'] = x.invert(s[0]);
+      dat['endDate'] = x.invert(s[1]);
+      dat['var'] = selectedBrush;
+      $.ajax({
+        type: 'POST',
+        url:'/_addna',
+        data: JSON.stringify(dat),
+        contentType: 'application/json;charset=UTF-8',
+        success: function(response){
+          console.log("success")
+          $("#alerts").append(alertbox('success','Added NA values.'))
+          datna = JSON.parse(response.dat);
+          redrawPoints(zoom_in=false)
+        },
+        error: function(error){
+          console.log(error);
+        }
+      });
+      return false;
+    }else{
+      $("#alerts").append(alertbox('warning','Please select values to add NAs.'))
+    }
   });
 })
 
 $(function(){
   $("#addflag").click(function(){
-    s = d3.brushSelection(d3.select("#"+selectedBrush).node())
-    dat = {}
-    dat['site'] = $('select[name=site]').val();
-    dat['startDate'] = x.invert(s[0]);
-    dat['endDate'] = x.invert(s[1]);
-    if(brushdown){
-      dat['var'] = variables;
-      d3.selectAll("svg").selectAll(".selected").classed("highlighted", function(d) {
-        is_brushed = dat['startDate'] <= d.date && d.date <= dat['endDate'];
-        return is_brushed;
-      });
-    }else{
-      dat['var'] = [selectedBrush];
-      d3.select("."+selectedBrush).selectAll(".selected").classed("highlighted", function(d) {
-        is_brushed = dat['startDate'] <= d.date && d.date <= dat['endDate'];
-        return is_brushed;
-      });
-    }
-    dat['flagid'] = $("select[name=flagID]").val();
-    dat['comment'] = $("input[name=fcomment]").val();
-    $.ajax({
-      type: 'POST',
-      url:'/_addflag',
-      data: JSON.stringify(dat),
-      contentType: 'application/json;charset=UTF-8',
-      success: function(response){
-        console.log("success")
-        $("#alerts").append(alertbox('success','Added flag.'))
-      },
-      error: function(error){
-        console.log(error);
+    if (undefined != selectedBrush){ // only do this if there is a brush selected
+      s = d3.brushSelection(d3.select("#"+selectedBrush).node())
+      dat = {}
+      dat['site'] = $('select[name=site]').val();
+      dat['startDate'] = x.invert(s[0]);
+      dat['endDate'] = x.invert(s[1]);
+      if(brushdown){
+        dat['var'] = variables;
+        d3.selectAll("svg").selectAll(".selected").classed("highlighted", function(d) {
+          is_brushed = dat['startDate'] <= d.date && d.date <= dat['endDate'];
+          return is_brushed;
+        });
+      }else{
+        dat['var'] = [selectedBrush];
+        d3.select("."+selectedBrush).selectAll(".selected").classed("highlighted", function(d) {
+          is_brushed = dat['startDate'] <= d.date && d.date <= dat['endDate'];
+          return is_brushed;
+        });
       }
-    });
-    return false;
+      dat['flagid'] = $("select[name=flagID]").val();
+      dat['comment'] = $("input[name=fcomment]").val();
+      $.ajax({
+        type: 'POST',
+        url:'/_addflag',
+        data: JSON.stringify(dat),
+        contentType: 'application/json;charset=UTF-8',
+        success: function(response){
+          console.log("success")
+          $("#alerts").append(alertbox('success','Added flag.'))
+        },
+        error: function(error){
+          console.log(error);
+        }
+      });
+      return false;
+    }else{
+      $("#alerts").append(alertbox('warning','Please select values to add Flags.'))
+    }
   })
 });
 
 $(function(){
   $("#addtag").click(function(){
-    s = d3.brushSelection(d3.select("#"+selectedBrush).node())
-    dat = {}
-    dat['site'] = $('select[name=site]').val();
-    dat['startDate'] = x.invert(s[0]);
-    dat['endDate'] = x.invert(s[1]);
-    dat['var'] = selectedBrush;
-    dat['tagid'] = $("select[name=tagID]").val();
-    dat['comment'] = $("input[name=fcomment]").val();
-    d3.select("."+selectedBrush).selectAll(".selected").classed("highlighted", function(d) {
-      is_brushed = dat['startDate'] <= d.date && d.date <= dat['endDate'];
-      return is_brushed;
-    });
-    $.ajax({
-      type: 'POST',
-      url:'/_addtag',
-      data: JSON.stringify(dat),
-      contentType: 'application/json;charset=UTF-8',
-      success: function(response){
-        console.log("success")
-        $("#alerts").append(alertbox('success','Added tag.'))
-      },
-      error: function(error){
-        console.log(error);
-      }
-    });
-    return false;
+    if (undefined != selectedBrush){ // only do this if there is a brush selected
+      s = d3.brushSelection(d3.select("#"+selectedBrush).node())
+      dat = {}
+      dat['site'] = $('select[name=site]').val();
+      dat['startDate'] = x.invert(s[0]);
+      dat['endDate'] = x.invert(s[1]);
+      dat['var'] = selectedBrush;
+      dat['tagid'] = $("select[name=tagID]").val();
+      dat['comment'] = $("input[name=fcomment]").val();
+      d3.select("."+selectedBrush).selectAll(".selected").classed("highlighted", function(d) {
+        is_brushed = dat['startDate'] <= d.date && d.date <= dat['endDate'];
+        return is_brushed;
+      });
+      $.ajax({
+        type: 'POST',
+        url:'/_addtag',
+        data: JSON.stringify(dat),
+        contentType: 'application/json;charset=UTF-8',
+        success: function(response){
+          console.log("success")
+          $("#alerts").append(alertbox('success','Added tag.'))
+        },
+        error: function(error){
+          console.log(error);
+        }
+      });
+      return false;
+    }else{
+      $("#alerts").append(alertbox('warning','Please select values to add Tags/Notes.'))
+    }
   })
 });
 

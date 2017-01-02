@@ -249,4 +249,5 @@ function redrawPoints(zoom_in){
   }
   d3.selectAll(".dot").classed("selected", false);
   d3.selectAll(".brush").call(brush.move, null);
+  var selectedBrush;
 }
