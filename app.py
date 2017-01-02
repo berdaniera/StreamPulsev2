@@ -35,10 +35,10 @@ login_manager.login_view = 'login'
 
 class Data(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    region = db.Column(db.Text)
-    site = db.Column(db.Text)
+    region = db.Column(db.String(10))
+    site = db.Column(db.String(50))
     DateTime_UTC = db.Column(db.DateTime)
-    variable = db.Column(db.Text)
+    variable = db.Column(db.String(50))
     value = db.Column(db.Float)
     flag = db.Column(db.Integer)
     def __init__(self, region, site, DateTime_UTC, variable, value, flag):
@@ -53,13 +53,13 @@ class Data(db.Model):
 
 class Flag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    region = db.Column(db.Text)
-    site = db.Column(db.Text)
+    region = db.Column(db.String(10))
+    site = db.Column(db.String(50))
     startDate = db.Column(db.DateTime)
     endDate = db.Column(db.DateTime)
-    variable = db.Column(db.Text)
-    flag = db.Column(db.Text)
-    comment = db.Column(db.Text)
+    variable = db.Column(db.String(50))
+    flag = db.Column(db.String(50))
+    comment = db.Column(db.String(255))
     by = db.Column(db.Integer) # user ID
     def __init__(self, region, site, startDate, endDate, variable, flag, comment, by):
         self.region = region
@@ -75,13 +75,13 @@ class Flag(db.Model):
 
 class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    region = db.Column(db.Text)
-    site = db.Column(db.Text)
+    region = db.Column(db.String(10))
+    site = db.Column(db.String(50))
     startDate = db.Column(db.DateTime)
     endDate = db.Column(db.DateTime)
-    variable = db.Column(db.Text)
-    tag = db.Column(db.Text)
-    comment = db.Column(db.Text)
+    variable = db.Column(db.String(50))
+    tag = db.Column(db.String(50))
+    comment = db.Column(db.String(255))
     by = db.Column(db.Integer) # user ID
     def __init__(self, region, site, startDate, endDate, variable, tag, comment, by):
         self.region = region
@@ -97,12 +97,12 @@ class Tag(db.Model):
 
 class Site(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    region = db.Column(db.Text)
-    site = db.Column(db.Text)
-    name = db.Column(db.Text)
+    region = db.Column(db.String(10))
+    site = db.Column(db.String(50))
+    name = db.Column(db.String(50))
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
-    usgs = db.Column(db.Text)
+    usgs = db.Column(db.String(20))
     addDate = db.Column(db.DateTime)
     embargo = db.Column(db.Boolean)
     by = db.Column(db.Integer)
@@ -121,10 +121,10 @@ class Site(db.Model):
 
 class Cols(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    region = db.Column(db.Text)
-    site = db.Column(db.Text)
-    rawcol = db.Column(db.Text)
-    dbcol = db.Column(db.Text)
+    region = db.Column(db.String(10))
+    site = db.Column(db.String(50))
+    rawcol = db.Column(db.String(100))
+    dbcol = db.Column(db.String(100))
     def __init__(self, region, site, rawcol, dbcol):
         self.region = region
         self.site = site
@@ -868,11 +868,11 @@ def modelgen():
         ss.append("(region='"+r+"' and site='"+s+"') ")
     qs = "or ".join(ss)
     nn = pd.read_sql("select region, site, name from site",db.engine)
-    #dd = pd.read_sql("select region, site, min(DateTime_UTC) as startdate, max(DateTime_UTC) as enddate from data where "+qs+"group by region, site", db.engine)
-    dd = pd.read_sql_table('data',db.engine)[['region','site','DateTime_UTC']]
-    dd = pd.concat([dd.groupby(['region','site']).DateTime_UTC.min(),dd.groupby(['region','site']).DateTime_UTC.max()], axis=1)
-    dd.columns = ['startdate','enddate']
-    dd = dd.reset_index()
+    dd = pd.read_sql("select region, site, min(DateTime_UTC) as startdate, max(DateTime_UTC) as enddate from data where "+qs+"group by region, site", db.engine)
+    # dd = pd.read_sql_table('data',db.engine)[['region','site','DateTime_UTC']]
+    # dd = pd.concat([dd.groupby(['region','site']).DateTime_UTC.min(),dd.groupby(['region','site']).DateTime_UTC.max()], axis=1)
+    # dd.columns = ['startdate','enddate']
+    # dd = dd.reset_index()
     dx = nn.merge(dd, on=['region','site'], how='right')
     dx['regionsite'] = [x[0]+"_"+x[1] for x in zip(dx.region,dx.site)]
     dx.startdate = dx.startdate.apply(lambda x: x.strftime('%Y-%m-%d'))
