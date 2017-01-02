@@ -869,7 +869,11 @@ def modelgen():
         ss.append("(region='"+r+"' and site='"+s+"') ")
     qs = "or ".join(ss)
     nn = pd.read_sql("select region, site, name from site",db.engine)
-    dd = pd.read_sql("select region, site, min(DateTime_UTC) as startdate, max(DateTime_UTC) as enddate from data where "+qs+"group by region, site", db.engine)
+    #dd = pd.read_sql("select region, site, min(DateTime_UTC) as startdate, max(DateTime_UTC) as enddate from data where "+qs+"group by region, site", db.engine)
+    dd = pd.read_sql("select region, site, DateTime_UTC from data",db.engine)
+    dd = pd.concat([dd.groupby(['region','site']).DateTime_UTC.max(),dd.groupby(['region','site']).DateTime_UTC.min()], axis=1)
+    dd.columns = ['startdate','enddate']
+    dd = dd.reset_index()
     dx = nn.merge(dd, on=['region','site'], how='right')
     dx['regionsite'] = [x[0]+"_"+x[1] for x in zip(dx.region,dx.site)]
     dx.startdate = dx.startdate.apply(lambda x: x.strftime('%Y-%m-%d'))
@@ -877,12 +881,6 @@ def modelgen():
     dx.name = dx.region+" - "+dx.name
     sitedict = sorted([tuple(x) for x in dx[['regionsite','name','startdate','enddate']].values], key=lambda tup: tup[1])
     return render_template('model.html',sites=sitedict)
-
-# jj = '{"data":'+xx.to_json(orient='records')+',"sites":'+meta.to_json(orient='records')+ff+'}'
-# resp = make_response(jj)
-# resp.status_code = 200
-# resp.headers["Content-Type"] = "text/csv"
-# return resp
 
 if __name__=='__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
