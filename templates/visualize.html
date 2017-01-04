@@ -159,6 +159,7 @@ $('#dsite').selectize({
 
 $(function(){
   $("button[name=vizsite]").click(function(){
+    $('#loading').show();
     var dat = {}
     dat['site'] = [$('select[name=site]').val()];
     $.ajax({
@@ -167,6 +168,8 @@ $(function(){
       data: JSON.stringify(dat),
       contentType: 'application/json;charset=UTF-8',
       success: function(response){
+        $('#loading').hide();
+        $('#graphcontrol').hide();
         $('#datepicker').daterangepicker({
           locale: {format: 'YYYY-MM-DD', separator: ' to '},
           startDate: response.initDate,
@@ -182,7 +185,6 @@ $(function(){
         //     todayHighlight: true,
         //     format: 'yyyy-mm-dd'
         // });
-        $('#graphcontrol').hide();
         // $('#startDate').val(response.initDate);
         // $('#endDate').val(response.endDate);
         $('#vizspecs input[name=site]').val(response.site);

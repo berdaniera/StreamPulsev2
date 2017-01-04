@@ -75,12 +75,14 @@ $(function(){
   $("button[name=dnldsite]").click(function(){
     var dat = {}
     dat['site'] = $('select[name=site]').val();
+    $('#loading').show();
     $.ajax({
       type: 'POST',
       url:'/_getstats',
       data: JSON.stringify(dat),
       contentType: 'application/json;charset=UTF-8',
       success: function(response){
+        $('#loading').hide();
         $('#dnldspecs').show();
         // $('.input-daterange').datepicker({
         //     startDate: response.startDate,
