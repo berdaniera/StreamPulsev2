@@ -427,16 +427,18 @@ def index():
 
 @app.route('/analytics')
 def analytics():
-    sqlq = "select A.region, A.site, B.name, B.latitude, B.longitude, A.value "+\
-        "from (select region, site, count(value) as value from data group by region, site) A "+\
-        "left join site B on A.region = B.region and A.site = B.site"
-    res = pd.read_sql(sqlq, db.engine)
-    # ss = pd.read_sql_table('site',db.engine).set_index(['site','region'])
+    # sqlq = "select A.region, A.site, B.name, B.latitude, B.longitude, A.value "+\
+    #     "from (select region, site, count(value) as value from data group by region, site) A "+\
+    #     "left join site B on A.region = B.region and A.site = B.site"
+    # res = pd.read_sql(sqlq, db.engine)
+    ss = pd.read_sql_table('site',db.engine).set_index(['site','region'])
+    sqlq = 'select region, site, count(value) as value from data group by region, site'
+    xx = pd.read_sql(sqlq, db.engine).set_index(['site','region'])
     # xx = pd.read_sql_table('data',db.engine)
     # xx = pd.DataFrame(xx.groupby(['site','region']).value.count())
-    # res = xx.merge(ss,"outer",left_index=True,right_index=True)
-    # res = res.reset_index()
-    # res = res[['region','site','name','latitude','longitude','value']]
+    res = xx.merge(ss,"left",left_index=True,right_index=True)
+    res = res.reset_index()
+    res = res[['region','site','name','latitude','longitude','value']]
     res = res.rename(columns={'region':'Region','site':'Site','name':'Name','latitude':'Latitude','longitude':'Longitude','value':'Observations'}).fillna(0).sort_values(['Observations','Longitude'],ascending=False)
     res.Observations = res.Observations.astype(int)
     return render_template('analytics.html',dats=Markup(res.to_html(index=False,classes=['table','table-condensed'])))
