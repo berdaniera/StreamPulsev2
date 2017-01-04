@@ -44,11 +44,12 @@
     Choose dates:<br>
     <input type="hidden" name="site" value="">
     <input type="hidden" name="variables" value="">
-    <div class="input-daterange input-group" id="datepicker">
+    <input class="form-control" type="text" id="datepicker" name="daterange" value="" placeholder="Select date range"><br>
+    <!-- <div class="input-daterange input-group" id="datepicker">
         <input type="text" id="startDate" class="input-sm form-control" name="startDate" data-date-format="YYYY-MM-DD"/>
         <span class="input-group-addon">to</span>
         <input type="text" id="endDate" class="input-sm form-control" name="endDate" data-date-format="YYYY-MM-DD"/>
-    </div><br>
+    </div><br> -->
     Select variables:<br>
     <div id="viz_vars"></div><br>
     <button name="getviz" class="btn btn-primary btn-block">View</button>
@@ -166,15 +167,24 @@ $(function(){
       data: JSON.stringify(dat),
       contentType: 'application/json;charset=UTF-8',
       success: function(response){
-        $('.input-daterange').datepicker({
-            startDate: response.startDate,
-            endDate: response.endDate,
-            todayHighlight: true,
-            format: 'yyyy-mm-dd'
+        $('#datepicker').daterangepicker({
+          locale: {format: 'YYYY-MM-DD', separator: ' to '},
+          startDate: response.startDate,
+          endDate: response.endDate,
+          minDate: response.startDate,
+          maxDate: response.endDate,
+          autoApply: true,
+          opens: 'left'
         });
+        // $('.input-daterange').datepicker({
+        //     startDate: response.startDate,
+        //     endDate: response.endDate,
+        //     todayHighlight: true,
+        //     format: 'yyyy-mm-dd'
+        // });
         $('#graphcontrol').hide();
-        $('#startDate').val(response.initDate);
-        $('#endDate').val(response.endDate);
+        // $('#startDate').val(response.initDate);
+        // $('#endDate').val(response.endDate);
         $('#vizspecs input[name=site]').val(response.site);
         $("#graphs").empty();
         $("#viz_vars").empty();
@@ -202,10 +212,9 @@ $(function(){
   $("button[name=getviz]").click(function(){
     var dat = {}
     dat['site'] = $('select[name=site]').val();
-    dat['startDate'] = $('#startDate').datepicker().val();
-    dat['endDate'] = $('#endDate').datepicker().val();
+    dat['startDate'] = $("#datepicker").data('daterangepicker').startDate.format('YYYY-MM-DD');//$('#startDate').datepicker().val();
+    dat['endDate'] = $("#datepicker").data('daterangepicker').endDate.format('YYYY-MM-DD');//$('#endDate').datepicker().val();
     dat['variables'] = $('#variables:checked').map(function() { return this.value; }).get();
-    console.log(dat);
     $('#vizspecs input[name=variables]').val( $('#variables:checked').map(function() { return this.value; }).get() );
     $.ajax({
       type: 'POST',

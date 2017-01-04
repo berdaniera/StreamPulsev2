@@ -27,11 +27,14 @@
     <p class="lead">Dates:</p>
     <input type="hidden" name="site" value="">
     <input type="hidden" name="variables" value="">
-    <div class="input-daterange input-group" id="datepicker">
+    <input type="hidden" name="startDate" value="">
+    <input type="hidden" name="endDate" value="">
+    <input class="form-control" type="text" id="datepicker" name="daterange" value="" placeholder="Select date range"><br>
+<!--<div class="input-daterange input-group" id="datepicker">
         <input type="text" id="startDate" class="input-sm form-control" name="startDate" data-date-format="YYYY-MM-DD"/>
         <span class="input-group-addon">to</span>
         <input type="text" id="endDate" class="input-sm form-control" name="endDate" data-date-format="YYYY-MM-DD"/>
-    </div><br>
+    </div><br> -->
     <p class="lead">Variables:</p>
     <div id="dnld_vars"></div><br>
     <div class="form-inline">
@@ -79,14 +82,24 @@ $(function(){
       contentType: 'application/json;charset=UTF-8',
       success: function(response){
         $('#dnldspecs').show();
-        $('.input-daterange').datepicker({
-            startDate: response.startDate,
-            endDate: response.endDate,
-            todayHighlight: true,
-            format: 'yyyy-mm-dd'
+        // $('.input-daterange').datepicker({
+        //     startDate: response.startDate,
+        //     endDate: response.endDate,
+        //     todayHighlight: true,
+        //     format: 'yyyy-mm-dd'
+        // });
+        // $('#startDate').val(response.startDate);
+        // $('#endDate').val(response.endDate);
+        $('#datepicker').daterangepicker({
+          locale: {format: 'YYYY-MM-DD', separator: ' to '},
+          startDate: response.startDate,
+          endDate: response.endDate,
+          minDate: response.startDate,
+          maxDate: response.endDate,
+          autoApply: true,
+          opens: 'left'
         });
-        $('#startDate').val(response.startDate);
-        $('#endDate').val(response.endDate);
+
         $('#dnldspecs input[name=site]').val(response.site);
         $("#dnld_vars").empty();
         for (var i = 0; i < response.variables.length; ++i) {
@@ -99,6 +112,11 @@ $(function(){
     });
     return false;
   })
+});
+
+$('#datepicker').on('apply.daterangepicker', function(ev, picker) {
+  $('#dnldspecs input[name=startDate]').val(picker.startDate.format('YYYY-MM-DD'));
+  $('#dnldspecs input[name=endDate]').val(picker.endDate.format('YYYY-MM-DD'));
 });
 
 $(function(){
