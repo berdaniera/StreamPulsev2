@@ -169,7 +169,7 @@ $(function(){
       success: function(response){
         $('#datepicker').daterangepicker({
           locale: {format: 'YYYY-MM-DD', separator: ' to '},
-          startDate: response.startDate,
+          startDate: response.initDate,
           endDate: response.endDate,
           minDate: response.startDate,
           maxDate: response.endDate,
