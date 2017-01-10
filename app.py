@@ -432,7 +432,7 @@ def analytics():
     #     "left join site B on A.region = B.region and A.site = B.site"
     # res = pd.read_sql(sqlq, db.engine)
     ss = pd.read_sql_table('site',db.engine).set_index(['site','region'])
-    sqlq = 'select region, site, count(value) as value from data group by region, site'
+    sqlq = 'select region, site, count(region) as value from data group by region, site'
     xx = pd.read_sql(sqlq, db.engine).set_index(['site','region'])
     # xx = pd.read_sql_table('data',db.engine)
     # xx = pd.DataFrame(xx.groupby(['site','region']).value.count())
