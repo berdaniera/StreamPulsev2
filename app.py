@@ -609,6 +609,7 @@ def getstats():
 
 @app.route('/_getcsv',methods=["POST"])
 def getcsv():
+    print request.form
     sitenm = request.form['site'].split(",")
     startDate = request.form['startDate']#.split("T")[0]
     endDate = request.form['endDate']
@@ -699,7 +700,6 @@ def qaqc():
     sitesa = [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
     qaqcuser = current_user.qaqc_auth()
     sites = [z for z in sitesa if z in qaqcuser]
-    sites = []
     xx = pd.read_sql("select distinct flag from flag", db.engine)
     flags = xx['flag'].tolist()
     sitedict = sorted([getsitenames(x) for x in sites], key=lambda tup: tup[1])

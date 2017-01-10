@@ -102,6 +102,8 @@ $(function(){
           opens: 'left'
         });
 
+        $('#dnldspecs input[name=startDate]').val(response.startDate);
+        $('#dnldspecs input[name=endDate]').val(response.endDate);
         $('#dnldspecs input[name=site]').val(response.site);
         $("#dnld_vars").empty();
         for (var i = 0; i < response.variables.length; ++i) {
@@ -117,8 +119,10 @@ $(function(){
 });
 
 $('#datepicker').on('apply.daterangepicker', function(ev, picker) {
-  $('#dnldspecs input[name=startDate]').val(picker.startDate.format('YYYY-MM-DD'));
-  $('#dnldspecs input[name=endDate]').val(picker.endDate.format('YYYY-MM-DD'));
+  var sdt = picker.startDate.format("YYYY-MM-DD");
+  var edt = picker.endDate.format("YYYY-MM-DD");
+  $('#dnldspecs input[name=startDate]').val(sdt);
+  $('#dnldspecs input[name=endDate]').val(edt);
 });
 
 $(function(){
