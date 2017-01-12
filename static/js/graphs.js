@@ -7,8 +7,8 @@ var x = d3.scaleUtc().range([0, width]),
     xAxis = d3.axisBottom().scale(x).ticks(6);
 var brush = d3.brushX()
   .on("start", brushstart)
-  .on("brush", brushmove)
-  .on("end", brushend);
+  .on("brush", brushmove);
+  // .on("end", brushend);
 var selectedBrush;
 var data;
 var variables;
@@ -69,7 +69,7 @@ function Plots(variables, data, flags, page){
     });
     // code for qaqc page
     if(page=="qaqc"){
-      svg.on('dblclick',function(){ redrawPoints(zoom_in=true) });
+      svg.on('dblclick',function(){ redrawPoints(zoom_in=true, sbrush=selectedBrush, reset=true) });
       svg.append("g").attr("class","brush")
         .attr("id", vvv)
         .call(brush);
@@ -169,8 +169,10 @@ $(function(){
 
 // Clear the previously-active brush, if any.
 function brushstart() {
+  d3.select("."+selectedBrush).select(".brush").call(brush.move, null);
   d3.selectAll(".dot").classed("selected", false); // clear on new start
-  d3.selectAll(".brush").call(brush.move, null);
+  // d3.selectAll(".brush").clear();
+  // d3.selectAll(".brush").call(brush.move, null);
   selectedBrush = $(this).attr("id")
 }
 function brushmove() {
@@ -189,23 +191,33 @@ function brushmove() {
     });
   }
 }
-function brushend(){}
-function redrawPoints(zoom_in){
-  s = d3.brushSelection(d3.select("#"+selectedBrush).node())
-  if(!s){ // nothing selected
-    extent = "none"
-  }else{
+// function brushend(){}
+
+function redrawPoints(zoom_in, sbrush, reset){
+  sbb = d3.select("."+sbrush).select(".brush").node()
+  if(!sbb){ // check if there is a brush
+    s = null
+  }else{ // if it exists, get the extent
+    s = d3.brushSelection(sbb)
+  }
+  if(!s || reset){ // nothing selected or resetting graph, extent goes to maximum
+    extent = d3.extent(data, function(d) { return d.date; })//"none"
+  }else{ // calculate extent bounds
     ext0 = x.invert(s[0])
     ext1 = x.invert(s[1])
     extent = [ext0,ext1]
   }
-  if(extent=="none"){ // reset view, zoom out
-    x.domain(d3.extent(data, function(d) { return d.date; }));
-  }else{
-    if(zoom_in){ // zoom in to selected region
-      x.domain(extent);
-    }
-  } // otherwise, just flagging?
+  if(zoom_in){ // if zooming, reset the extent
+    x.domain(extent);
+  }
+
+  // if(reset){ extent = "none" }
+  // if(extent=="none"){ // reset view, zoom out
+  //   extent = d3.extent(data, function(d) { return d.date; })
+  //   x.domain(extent);
+  // }else{
+  // } // otherwise, just flagging?
+
   // redraw data
   for (var i = 0; i < variables.length; ++i) {
     vvv = variables[i];
