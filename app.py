@@ -822,7 +822,7 @@ def qaqcdemo():
     xx = xx.reset_index()
     # get anomaly dates
     xss = xx.dropna()
-    clf = svm.OneClassSVM(nu=0.01,kernel='rbf',gamma=0.1)
+    clf = svm.OneClassSVM(nu=0.005,kernel='rbf',gamma=1./len(variables))
     xsvm = xss.as_matrix(variables)
     clf.fit(xsvm)
     # xss.assign(pred=clf.predict(xsvm))
