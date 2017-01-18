@@ -806,7 +806,9 @@ def addna():
 
 @app.route('/cleandemo')
 def qaqcdemo():
-    sqlq = "select * from data where region='NC' and site='NHC' and DateTime_UTC>'2016-10-14' and DateTime_UTC<'2016-11-27' and variable in ('AirTemp_C','Nitrate_mgL','DO_mgL','WaterPres_kPa','CDOM_mV','Light_lux','Turbidity_mV','WaterTemp_C','AirPres_kPa','SpecCond_mScm')"
+    sqlq = "select * from data where region='NC' and site='NHC' and "+\
+        "DateTime_UTC>'2016-09-16' and DateTime_UTC<'2016-10-07' and "+\
+        "variable in ('DO_mgL','WaterPres_kPa','CDOM_mV','Turbidity_mV','WaterTemp_C','pH','SpecCond_mScm')"
     # sqlq = "select * from data where region='NC' and site='Mud'"
     xx = pd.read_sql(sqlq, db.engine)
     # xx.loc[xx.flag==0,"value"] = None # set NaNs existing flags
