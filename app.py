@@ -807,7 +807,7 @@ def addna():
 @app.route('/cleandemo')
 def qaqcdemo():
     sqlq = "select * from data where region='NC' and site='NHC' and "+\
-        "DateTime_UTC>'2016-09-16' and DateTime_UTC<'2016-10-07' and "+\
+        "DateTime_UTC>'2016-09-23' and DateTime_UTC<'2016-10-07' and "+\
         "variable in ('DO_mgL','WaterPres_kPa','CDOM_mV','Turbidity_mV','WaterTemp_C','pH','SpecCond_mScm')"
     # sqlq = "select * from data where region='NC' and site='Mud'"
     xx = pd.read_sql(sqlq, db.engine)
