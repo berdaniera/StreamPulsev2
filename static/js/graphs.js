@@ -221,8 +221,14 @@ function redrawPoints(zoom_in, sbrush, reset){
   // redraw data
   for (var i = 0; i < variables.length; ++i) {
     vvv = variables[i];
-    d3.select("."+vvv).select(".axis--x").call(xAxis); //redraw axis
+    // if(datna != null){
+    //   dna = {}
+    //   datna.forEach(function(e){dna[e.DateTime_UTC]=e[vvv]})
+    //   y.domain(d3.extent(datna, function(d) { return d[vvv]; })); // reset Y to get rid of NA values
+    // }else{
+    // }
     y.domain(d3.extent(data, function(d) { return d[vvv]; })); // reset Y to get rid of NA values
+    d3.select("."+vvv).select(".axis--x").call(xAxis); //redraw axis
     var line = d3.line()
         .defined(function(d){return d[vvv];})
         .x(function(d) { return x(d.date); })
@@ -233,14 +239,12 @@ function redrawPoints(zoom_in, sbrush, reset){
     d3.select("."+vvv).selectAll('.sunriseset')
         .attr('x', function(d) { return x(d.set); })
         .attr('width', function(d) { return x(d.rise) - x(d.set); })
-    if(!zoom_in){ // adding na values
-      dna = {}
-      datna.forEach(function(e){dna[e.DateTime_UTC]=e[vvv]})
-      d3.select("."+vvv).selectAll(".dot")
-        .classed("naval", function(d) {
-          return dna[d.DateTime_UTC] == null;
-        });
-    }
+    // if(!zoom_in){ // adding na values
+    //   d3.select("."+vvv).selectAll(".dot")
+    //     .classed("naval", function(d) {
+    //       return dna[d.DateTime_UTC] == null;
+    //     });
+    // }
     if(zoom_in){ // check for outside points
       // redraw points
       d3.select("."+vvv).selectAll(".dot")

@@ -1,0 +1,236 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<div class="row"><div class="col-md-6 col-md-offset-3">
+  <h1>Clean Data</h1>
+  <p class="lead">Try out our data flagging application. <small>This tool is available to you when you contribute data to StreamPULSE.</small><p>
+</div></div>
+<br>
+
+<div class="row" id="flagging">
+
+<div class="row text-center">
+  <div class="col-md-12">
+    <div class="panel panel-default">
+      <div class="panel-body">
+        <div class="form-inline">
+        Show local night-time: <input type="checkbox" id="shownight" value="yes" checked> &nbsp;
+        Hightlight anomalies: <input type="checkbox" id="showanom" value="yes"> <br>
+        <!-- Aggregation: <select class="form-control" id="timescale" name="timescale">
+          <option value="15m" selected>15 minutes (default)</option>
+          <option value="1h">1 hour</option>
+          <option value="1d">1 day</option></select> &nbsp; -->
+        Fill down marking brush: <input type="checkbox" id="fillbrush" value="yes"> &nbsp;
+        Backfill area variable: <select class="form-control" id="backgraphlist" name="backgraphlist"></select>
+        <br>
+        <button class="btn btn-danger" type="button" id="addna">Set NA values</button>
+        <button class="btn btn-primary" type="button" id="zoomin">Zoom in to selected region</button>
+        <button class="btn btn-link" type="button" id="zoomreset">Reset zoom</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="panel panel-default">
+      <div class="panel-heading"><span class="lead">Flags</span> &ndash; data that should be noted as a concern (sensor failure, fouling, etc.)</div>
+      <div class="panel-body">
+        <select id="flags" placeholder="Choose (or enter) a flag ID (alphanumeric with no spaces please)" name="flagID">
+          <option value="">Choose (or enter) a flag ID</option>
+          {% for f in flags %}
+          <option value="{{f}}">{{f}}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="fcomment" class="form-control" placeholder="Add comments (optional)">
+        <button class="btn btn-warning btn-block" type="button" id="addflag">Flag selected</button>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="panel panel-default">
+      <div class="panel-heading"><span class="lead">Tags/notes</span> &ndash; interesting features in the data (storms, leaf drop, etc.)</div>
+      <div class="panel-body">
+        <select id="tags" placeholder="Choose (or enter) a tag ID (alphanumeric with no spaces please)" name="tagID">
+          <option value="">Choose (or enter) a tag ID</option>
+          {% for t in tags %}
+          <option value="{{f}}">{{t}}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="fcomment" class="form-control" placeholder="Add comments (optional)">
+        <button class="btn btn-info btn-block" type="button" id="addtag">Tag selected</button>
+      </div>
+    </div>
+  </div>
+</div>
+<br>
+<div class="row text-center">
+
+</div>
+
+</div>
+
+
+
+<div class="row" id="graphs"></div>
+
+
+<script src="static/js/graphs.js"></script>
+<script>
+$('#flags').selectize({
+    delimiter: ',',
+    persist: false,
+    create: function(input) { return {value: input,text: input} }
+});
+
+$('#tags').selectize({
+    delimiter: ',',
+    persist: false,
+    create: function(input) { return {value: input,text: input} }
+});
+
+data = JSON.parse('{{dat|safe}}')
+variables = JSON.parse('{{variables|tojson|safe}}')
+sundat = JSON.parse('{{sunriseset|safe}}')
+sundat.forEach(function(d){
+  d.rise = parseDate(d.rise);
+  d.set = parseDate(d.set);
+});
+var anomaly = JSON.parse('{{anomaly|safe}}').map(parseDate)
+anom = {}
+anomaly.map(function(d){anom[d]=true})
+flags = []//JSON.parse('{{flagdat|safe}}');
+Plots(variables, data, flags, "qaqc");
+if($("#shownight").is(":checked")) { Sunlight(variables, sundat) };
+$('#flagging').show();
+$('#backgraphlist')
+    .find('option')
+    .remove()
+    .end()
+    .append('<option value="None" selected>None</option>');
+for (var i = 0; i < variables.length; ++i) {
+    $('#backgraphlist').append('<option value="'+variables[i]+'">'+variables[i]+'</option>');
+}
+
+$(function(){
+  $("#zoomin").click(function(){
+    redrawPoints(zoom_in = true, sbrush=selectedBrush, reset=false)
+  });
+})
+
+$(function(){
+  $("#zoomreset").click(function(){
+    redrawPoints(zoom_in = true, sbrush=selectedBrush, reset=true)
+  });
+})
+
+
+function alertbox(alrt,msg){
+  return '<div class="alert alert-dismissible alert-'+alrt+'">\
+    <button class="close" data-dismiss="alert" aria-label="close">&times;</button>\
+    '+msg+'</div>'
+}
+
+
+$(function(){
+  $("#addna").click(function(){
+    if (undefined != selectedBrush){ // only do this if there is a brush selected
+      s = d3.brushSelection(d3.select("#"+selectedBrush).node())
+      dat = {}
+      dat['site'] = "NC_Mud";
+      dat['startDate'] = x.invert(s[0]);
+      dat['endDate'] = x.invert(s[1]);
+      dat['var'] = selectedBrush;
+      data.map(function(e){ if(e.date>=dat['startDate']&&e.date<=dat['endDate']){ e[selectedBrush]=null } });
+      redrawPoints(zoom_in=false, sbrush=selectedBrush, reset=false)
+      return false;
+    }else{
+      $("#alerts").append(alertbox('warning','Please select values to add NAs.'))
+    }
+  });
+})
+
+$(function(){
+  $("#addflag").click(function(){
+    if (undefined != selectedBrush){ // only do this if there is a brush selected
+      s = d3.brushSelection(d3.select("#"+selectedBrush).node())
+      dat = {}
+      dat['site'] = $('select[name=site]').val();
+      dat['startDate'] = x.invert(s[0]);
+      dat['endDate'] = x.invert(s[1]);
+      if(brushdown){
+        dat['var'] = variables;
+        d3.selectAll("svg").selectAll(".selected").classed("highlighted", function(d) {
+          is_brushed = dat['startDate'] <= d.date && d.date <= dat['endDate'];
+          return is_brushed;
+        });
+      }else{
+        dat['var'] = [selectedBrush];
+        d3.select("."+selectedBrush).selectAll(".selected").classed("highlighted", function(d) {
+          is_brushed = dat['startDate'] <= d.date && d.date <= dat['endDate'];
+          return is_brushed;
+        });
+      }
+      dat['flagid'] = $("select[name=flagID]").val();
+      dat['comment'] = $("input[name=fcomment]").val();
+      $("#alerts").append(alertbox('success','Added flag.'))
+      return false;
+    }else{
+      $("#alerts").append(alertbox('warning','Please select values to add Flags.'))
+    }
+  })
+});
+
+$(function(){
+  $("#addtag").click(function(){
+    if (undefined != selectedBrush){ // only do this if there is a brush selected
+      s = d3.brushSelection(d3.select("#"+selectedBrush).node())
+      dat = {}
+      dat['site'] = $('select[name=site]').val();
+      dat['startDate'] = x.invert(s[0]);
+      dat['endDate'] = x.invert(s[1]);
+      dat['var'] = selectedBrush;
+      dat['tagid'] = $("select[name=tagID]").val();
+      dat['comment'] = $("input[name=fcomment]").val();
+      d3.select("."+selectedBrush).selectAll(".selected").classed("highlighted", function(d) {
+        is_brushed = dat['startDate'] <= d.date && d.date <= dat['endDate'];
+        return is_brushed;
+      });
+      $("#alerts").append(alertbox('success','Added tag.'))
+      return false;
+    }else{
+      $("#alerts").append(alertbox('warning','Please select values to add Tags/Notes.'))
+    }
+  })
+});
+
+$(function(){
+  $('#fillbrush').change(function() {
+    if($(this).is(":checked")) {
+      brushdown = true;
+    }else{
+      brushdown = false;
+    }
+  });
+})
+
+$(function(){
+  $('#showanom').change(function(){
+    if($(this).is(":checked")){
+      d3.selectAll(".dot").classed("anomdot", function(d) {
+        if(anom[d.date]==true){
+          return true
+        }else{
+          return false
+        }
+      });
+    }else{
+      d3.selectAll(".dot").classed("anomdot", false);
+    }
+  })
+})
+
+</script>
+
+{% endblock %}

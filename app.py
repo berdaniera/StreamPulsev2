@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from dateutil import parser as dtparse
 from math import log, sqrt, floor
 import simplejson as json
+from sklearn import svm
 import pandas as pd
 import numpy as np
 import requests
@@ -217,6 +218,10 @@ variables = ['DateTime_UTC',
 'Light2_PAR',
 'Light3_lux',
 'Light3_PAR',
+'Light4_lux',
+'Light4_PAR',
+'Light5_lux',
+'Light5_PAR',
 'Battery_V']
 
 # File uploading function
@@ -641,7 +646,7 @@ def getcsv():
     return resp
 
 @app.route('/visualize')
-@login_required
+# @login_required
 def visualize():
     # xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
     # sites = xx['sites'].tolist()
@@ -798,6 +803,47 @@ def addna():
     xx.columns = xx.columns.droplevel()
     xx = xx.reset_index()
     return jsonify(dat=xx.to_json(orient='records',date_format='iso'))
+
+@app.route('/cleandemo')
+def qaqcdemo():
+    sqlq = "select * from data where region='NC' and site='NHC' and DateTime_UTC>'2016-10-14' and DateTime_UTC<'2016-11-27' and variable in ('AirTemp_C','Nitrate_mgL','DO_mgL','WaterPres_kPa','CDOM_mV','Light_lux','Turbidity_mV','WaterTemp_C','AirPres_kPa','SpecCond_mScm')"
+    # sqlq = "select * from data where region='NC' and site='Mud'"
+    xx = pd.read_sql(sqlq, db.engine)
+    # xx.loc[xx.flag==0,"value"] = None # set NaNs existing flags
+    flagdat = xx[['DateTime_UTC','variable','flag']].dropna().drop(['flag'],axis=1).to_json(orient='records',date_format='iso') # flag data
+    variables = list(set(xx['variable'].tolist()))
+    xx = xx.drop('id', axis=1).drop_duplicates()\
+      .set_index(["DateTime_UTC","variable"])\
+      .drop(['region','site','flag'],axis=1)\
+      .unstack('variable')
+    xx.columns = xx.columns.droplevel()
+    xx = xx.reset_index()
+    # get anomaly dates
+    xss = xx.dropna()
+    clf = svm.OneClassSVM(nu=0.01,kernel='rbf',gamma=0.1)
+    xsvm = xss.as_matrix(variables)
+    clf.fit(xsvm)
+    # xss.assign(pred=clf.predict(xsvm))
+    xss['pred'] = clf.predict(xsvm).tolist()
+    anomaly = xss[xss.pred==-1].DateTime_UTC.to_json(orient='records',date_format='iso')
+    # Get sunrise sunset data
+    sxx = pd.read_sql("select * from site where region='NC' and site='NHC'",db.engine)
+    sdt = min(xx.DateTime_UTC).replace(hour=0, minute=0,second=0,microsecond=0)
+    edt = max(xx.DateTime_UTC).replace(hour=0, minute=0,second=0,microsecond=0)+timedelta(days=1)
+    ddt = edt-sdt
+    lat = sxx.latitude[0]
+    lng = sxx.longitude[0]
+    rss = []
+    for i in range(ddt.days + 1):
+        rise, sets = list(suns(sdt+timedelta(days=i-1), latitude=lat, longitude=lng).calculate())
+        if rise>sets:
+            sets = sets + timedelta(days=1) # account for UTC
+        rss.append([rise, sets])
+    #
+    rss = pd.DataFrame(rss, columns=("rise","set"))
+    rss.set = rss.set.shift(1)
+    sunriseset = rss.loc[1:].to_json(orient='records',date_format='iso')
+    return render_template('qaqcdemo.html', variables=variables, dat=xx.to_json(orient='records',date_format='iso'), sunriseset=sunriseset, flagdat=flagdat, anomaly=anomaly)
 
 @app.route('/api')
 def api():
