@@ -222,8 +222,8 @@ function redrawPoints(zoom_in, sbrush, reset){
   for (var i = 0; i < variables.length; ++i) {
     vvv = variables[i];
     // if(datna != null){
-    //   dna = {}
-    //   datna.forEach(function(e){dna[e.DateTime_UTC]=e[vvv]})
+    dna = {}
+    data.forEach(function(e){dna[e.DateTime_UTC]=e[vvv]})
     //   y.domain(d3.extent(datna, function(d) { return d[vvv]; })); // reset Y to get rid of NA values
     // }else{
     // }
