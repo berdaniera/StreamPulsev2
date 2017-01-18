@@ -810,7 +810,7 @@ def qaqcdemo():
         "DateTime_UTC>'2016-09-23' and DateTime_UTC<'2016-10-07' and "+\
         "variable in ('DO_mgL','WaterPres_kPa','CDOM_mV','Turbidity_mV','WaterTemp_C','pH','SpecCond_mScm')"
     # sqlq = "select * from data where region='NC' and site='Mud'"
-    xx = pd.read_sql(sqlq, db.engine)
+    xx = pd.read_sql(sqlq, db.engine) # training data
     # xx.loc[xx.flag==0,"value"] = None # set NaNs existing flags
     flagdat = xx[['DateTime_UTC','variable','flag']].dropna().drop(['flag'],axis=1).to_json(orient='records',date_format='iso') # flag data
     variables = list(set(xx['variable'].tolist()))
@@ -820,13 +820,15 @@ def qaqcdemo():
       .unstack('variable')
     xx.columns = xx.columns.droplevel()
     xx = xx.reset_index()
-    # get anomaly dates
-    xss = xx.dropna()
-    clf = svm.OneClassSVM(nu=0.1,kernel='rbf',gamma='auto')
-    xsvm = xss.as_matrix(variables)
+        # get anomaly dates
+    xtrain = xx[(xx.DateTime_UTC<'2016-09-29')].dropna()# training data first portion
+    clf = svm.OneClassSVM(nu=0.01,kernel='rbf',gamma='auto')
+    xsvm = xtrain.as_matrix(variables)
     clf.fit(xsvm)
     # xss.assign(pred=clf.predict(xsvm))
-    xss['pred'] = clf.predict(xsvm).tolist()
+    xss = xx.dropna()
+    xpred = xss.as_matrix(variables)
+    xss['pred'] = clf.predict(xpred).tolist()
     anomaly = xss[xss.pred==-1].DateTime_UTC.to_json(orient='records',date_format='iso')
     # Get sunrise sunset data
     sxx = pd.read_sql("select * from site where region='NC' and site='NHC'",db.engine)
