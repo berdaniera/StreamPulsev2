@@ -240,10 +240,10 @@ function redrawPoints(zoom_in, sbrush, reset){
         .attr('x', function(d) { return x(d.set); })
         .attr('width', function(d) { return x(d.rise) - x(d.set); })
     // if(!zoom_in){ // adding na values
-    //   d3.select("."+vvv).selectAll(".dot")
-    //     .classed("naval", function(d) {
-    //       return dna[d.DateTime_UTC] == null;
-    //     });
+    d3.select("."+vvv).selectAll(".dot")
+      .classed("outside", function(d) {
+        return dna[d.DateTime_UTC] == null;
+      });
     // }
     if(zoom_in){ // check for outside points
       // redraw points
