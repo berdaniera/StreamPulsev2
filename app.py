@@ -462,7 +462,7 @@ def upload():
             return redirect(request.url)
         ufiles = request.files.getlist("file")
         ufnms = [x.filename for x in ufiles]
-        ffregex = "[A-Z]{2}_.*_[0-9]{4}-[0-9]{2}-[0-9]{2}_[A-Z]{2}.[a-zA-Z]{3}" # core sites
+        ffregex = "[A-Z]{2}_.*_[0-9]{4}-[0-9]{2}-[0-9]{2}_[A-Z]{2}[0-9]?.[a-zA-Z]{3}" # core sites
         ffregex2 = "[A-Z]{2}_.*_[0-9]{4}-[0-9]{2}-[0-9]{2}.csv" # leveraged sites
         pattern = re.compile(ffregex+"|"+ffregex2)
         if not all([pattern.match(f) is not None for f in ufnms]):
