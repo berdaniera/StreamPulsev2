@@ -14,10 +14,10 @@ import pandas as pd
 import numpy as np
 import requests
 import binascii
-import config as cfg
 import pysb
 import os
 import re
+import config as cfg
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = cfg.SECRET_KEY
@@ -237,22 +237,24 @@ def read_hobo(f):
     m = [re.sub(" ","",x.split(",")[0]) for x in xt.columns.tolist()]
     u = [x.split(",")[1].split(" ")[1] for x in xt.columns.tolist()]
     tzoff = re.sub("GMT(.[0-9]{2}):([0-9]{2})","\\1",u[0])
+    ll = f.split("_")[3].split(".")[0]
     # if "-" in u[0]:
     #     tzoff = "+"+re.sub("GMT.([0-9]{2}):([0-9]{2})","\\1",u[0])
     # else:
     uu = [re.sub("\\ |\\/|°","",x) for x in u[1:]]
     uu = [re.sub(r'[^\x00-\x7f]',r'', x) for x in uu] # get rid of unicode
-    newcols = ['DateTime']+[nme+unit for unit,nme in zip(uu,m[1:])]
+    newcols = ['DateTime']+[logg+nme+unit for logg,unit,nme in zip(ll,uu,m[1:])]
     xt = xt.rename(columns=dict(zip(xt.columns.tolist(),newcols)))
     xt['DateTimeUTC'] = [dtparse.parse(x)-timedelta(hours=int(tzoff)) for x in xt.DateTime]
-    if "_HW" in f:
-        xt = xt.rename(columns={'AbsPreskPa':'water_kPa','TempC':'water_temp'})
-    if "_HA" in f:
-        xt = xt.rename(columns={'AbsPreskPa':'air_kPa','TempC':'air_temp'})
-    if "_HD" in f:
-        xt = xt.rename(columns={'TempC':'DO_temp'})
-    if "_HP" in f:
-        xt = xt.rename(columns={'TempC':'light_temp'})
+    xt = xt.rename(columns={'HWAbsPreskPa':'WaterPres_kPa','HWTempC':'WaterTemp_C','HAAbsPreskPa':'AirPres_kPa','HATempC':'AirTemp_C',})
+    # if "_HW" in f:
+    #     xt = xt.rename(columns={'AbsPreskPa':'water_kPa','TempC':'water_temp'})
+    # if "_HA" in f:
+    #     xt = xt.rename(columns={'AbsPreskPa':'air_kPa','TempC':'air_temp'})
+    # if "_HD" in f:
+    #     xt = xt.rename(columns={'TempC':'DO_temp'})
+    # if "_HP" in f:
+    #     xt = xt.rename(columns={'TempC':'light_temp'})
     cols = xt.columns.tolist()
     return xt[cols[-1:]+cols[1:-1]]
 
@@ -264,6 +266,8 @@ def read_csci(f, gmtoff):
 
 def read_manta(f, gmtoff):
     xt = pd.read_csv(f, skiprows=[0])
+    if 'Eureka' in xt.columns[0]:
+        xt.columns = xt.loc[0].tolist()
     xt = xt[~xt.DATE.str.contains('Eureka|DATE')]
     xt['DateTime'] = xt['DATE']+" "+xt['TIME']
     xt['DateTimeUTC'] = [dtparse.parse(x)-timedelta(hours=gmtoff) for x in xt.DateTime]
@@ -273,7 +277,8 @@ def read_manta(f, gmtoff):
     splitcols = [x.split(" ") for x in xt.columns.tolist()]
     xt.columns = [x[0]+"_"+x[-1] if len(x)>1 else x[0] for x in splitcols]
     cols = xt.columns.tolist()
-    return xt[cols[-1:]+cols[1:-1]]
+    xt = xt.set_index('DateTimeUTC').apply(lambda x: pd.to_numeric(x, errors='coerce')).reset_index()
+    return xt
 
 def load_file(f, gmtoff, logger):
     if logger=="CS":
