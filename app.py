@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ri# -*- coding: utf-8 -*-
 from flask import Flask, Markup, session, flash, render_template, request, jsonify, url_for, make_response, redirect, g
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -232,7 +232,7 @@ def allowed_file(filename):
 
 def read_hobo(f):
     xt = pd.read_csv(f, skiprows=[0])
-    cols = [x for x in xt.columns.tolist() if re.match("^#$|Coupler|File|Host|Connected|Attached|Stopped|End|Unnamed",x) is None]
+    cols = [x for x in xt.columns.tolist() if re.match("^#$|Coupler|File|Host|Connected|Attached|Stopped|End|Unnamed|Bad",x) is None]
     xt = xt[cols]
     m = [re.sub(" ","",x.split(",")[0]) for x in xt.columns.tolist()]
     u = [x.split(",")[1].split(" ")[1] for x in xt.columns.tolist()]
