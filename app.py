@@ -508,6 +508,7 @@ def upload():
             rr,ss = site[0].split("_")
             cdict = pd.read_sql("select * from cols where region='"+rr+"' and site='"+ss+"'", db.engine)
             cdict = dict(zip(cdict['rawcol'],cdict['dbcol']))
+            flash("NOTE: I just updated the column naming from Hobo dataloggers. Please double check your column matching. Thanks!",'alert-danger')
         except IOError:
             msg = Markup('Unknown error. Please <a href="mailto:aaron.berdanier@gmail.com" class="alert-link">email Aaron</a> with a copy of the file you tried to upload...')
             flash(msg,'alert-danger')
