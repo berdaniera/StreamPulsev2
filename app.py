@@ -1,4 +1,4 @@
-ri# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from flask import Flask, Markup, session, flash, render_template, request, jsonify, url_for, make_response, redirect, g
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
