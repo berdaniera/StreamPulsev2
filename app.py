@@ -238,23 +238,22 @@ def read_hobo(f):
     u = [x.split(",")[1].split(" ")[1] for x in xt.columns.tolist()]
     tzoff = re.sub("GMT(.[0-9]{2}):([0-9]{2})","\\1",u[0])
     ll = f.split("_")[3].split(".")[0]
-    # if "-" in u[0]:
-    #     tzoff = "+"+re.sub("GMT.([0-9]{2}):([0-9]{2})","\\1",u[0])
-    # else:
+    inum = re.sub("[A-Z]{2}","",ll)
     uu = [re.sub("\\ |\\/|°","",x) for x in u[1:]]
     uu = [re.sub(r'[^\x00-\x7f]',r'', x) for x in uu] # get rid of unicode
-    newcols = ['DateTime']+[logg+nme+unit for logg,unit,nme in zip(ll,uu,m[1:])]
+    newcols = ['DateTime']+[nme+unit for unit,nme in zip(uu,m[1:])]
     xt = xt.rename(columns=dict(zip(xt.columns.tolist(),newcols)))
     xt['DateTimeUTC'] = [dtparse.parse(x)-timedelta(hours=int(tzoff)) for x in xt.DateTime]
-    xt = xt.rename(columns={'HWAbsPreskPa':'WaterPres_kPa','HWTempC':'WaterTemp_C','HAAbsPreskPa':'AirPres_kPa','HATempC':'AirTemp_C',})
-    # if "_HW" in f:
-    #     xt = xt.rename(columns={'AbsPreskPa':'water_kPa','TempC':'water_temp'})
-    # if "_HA" in f:
-    #     xt = xt.rename(columns={'AbsPreskPa':'air_kPa','TempC':'air_temp'})
-    # if "_HD" in f:
-    #     xt = xt.rename(columns={'TempC':'DO_temp'})
-    # if "_HP" in f:
-    #     xt = xt.rename(columns={'TempC':'light_temp'})
+    # xt = xt.rename(columns={'HWAbsPreskPa':'WaterPres_kPa','HWTempC':'WaterTemp_C','HAAbsPreskPa':'AirPres_kPa','HATempC':'AirTemp_C',})
+    if "_HW" in f:
+        xt = xt.rename(columns={'AbsPreskPa':'WaterPres_kPa','TempC':'WaterTemp_C'})
+    if "_HA" in f:
+        xt = xt.rename(columns={'AbsPreskPa':'AirPres_kPa','TempC':'AirTemp_C'})
+    if "_HD" in f:
+        xt = xt.rename(columns={'TempC':'DOTemp_C'})
+    if "_HP" in f:
+        xt = xt.rename(columns={'TempC':'LightTemp_C'})
+    xt.columns = [cc+inum for cc in xt.columns]
     cols = xt.columns.tolist()
     return xt[cols[-1:]+cols[1:-1]]
 
