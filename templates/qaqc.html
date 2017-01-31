@@ -4,7 +4,7 @@
 <div class="row"><div class="col-md-6 col-md-offset-3">
   <h1>Clean Data</h1>
   <p class="lead">Authorized users will be able to visually clean and analyze data here. <small>This step is important for assuring data quality.</small><p>
-    
+
   <form id="qaqc">
     <div class="col-md-8">
       <select placeholder="Choose a site" id="dsite" name="site">
@@ -76,14 +76,14 @@
       </div>
     </div>
   </div>
-</div>
-<br>
-<div class="row text-center">
 
 </div>
-
+<div class="row">
+  <div class="col-md-6 text-left"><button class="btn btn-link" type="button" id="panback"><< Previous four weeks</button></div>
+  <div class="col-md-6 text-right"><button class="btn btn-link" type="button" id="panforward">Next four weeks >></button></div>
 </div>
 
+</div>
 
 
 <div class="row" id="graphs"></div>
@@ -109,6 +109,20 @@ $('#tags').selectize({
     create: function(input) { return {value: input,text: input} }
 });
 
+var plotdates;
+var alldata;
+var alldatna;
+var plotstart;
+var plotend;
+
+function getdisplaydata(start, end, dat){
+  stdt = Date.parse(start)
+  endt = Date.parse(end)
+  pltdat = $(dat).filter(function(i,n){
+    return Date.parse(n.DateTime_UTC)>stdt && Date.parse(n.DateTime_UTC)<endt
+  })
+  return $.makeArray(pltdat)
+}
 
 $(function(){
   $("button[name=qaqcsite]").click(function(){
@@ -121,7 +135,11 @@ $(function(){
       contentType: 'application/json;charset=UTF-8',
       success: function(response){
         $("#graphs").empty();
-        data = JSON.parse(response.dat);
+        plotdates = response.plotdates; // get plot date list in
+        alldata = JSON.parse(response.dat);
+        plotstart = plotdates[1];
+        plotend = plotdates[0];
+        data = getdisplaydata(plotstart,plotend,alldata);
         variables = response.variables;
         sundat = JSON.parse(response.sunriseset);
         sundat.forEach(function(d){
@@ -161,6 +179,41 @@ $(function(){
   });
 })
 
+$(function(){
+  $("#panback").click(function(){
+    if(plotstart!=plotdates.slice(-1)[0]){
+      // if the start date is not the last date in the list
+      plotend = plotstart;
+      plotstart = plotdates[plotdates.indexOf(plotstart)+1];
+      if(datna != null){
+        data = getdisplaydata(plotstart,plotend,alldatna);
+      }else{
+        data = getdisplaydata(plotstart,plotend,alldata);
+      }
+      $("#graphs").empty();
+      Plots(variables, data, flags, "qaqc");
+      if($("#shownight").is(":checked")) { Sunlight(variables, sundat) };
+    }
+  });
+})
+
+$(function(){
+  $("#panforward").click(function(){
+    if(plotend!=plotdates[0]){
+      // if the end date is not the first date in the list
+      plotstart = plotend;
+      plotend = plotdates[plotdates.indexOf(plotend)-1];
+      if(datna != null){
+        data = getdisplaydata(plotstart,plotend,alldatna);
+      }else{
+        data = getdisplaydata(plotstart,plotend,alldata);
+      }
+      $("#graphs").empty();
+      Plots(variables, data, flags, "qaqc");
+      if($("#shownight").is(":checked")) { Sunlight(variables, sundat) };
+    }
+  });
+})
 
 function alertbox(alrt,msg){
   return '<div class="alert alert-dismissible alert-'+alrt+'">\
@@ -186,7 +239,8 @@ $(function(){
         success: function(response){
           console.log("success")
           $("#alerts").append(alertbox('success','Added NA values.'))
-          datna = JSON.parse(response.dat);
+          alldatna = JSON.parse(response.dat);
+          datna = getdisplaydata(plotstart,plotend,alldatna);
           redrawPoints(zoom_in=false, sbrush=selectedBrush, reset=false)
         },
         error: function(error){

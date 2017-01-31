@@ -222,12 +222,21 @@ function redrawPoints(zoom_in, sbrush, reset){
   for (var i = 0; i < variables.length; ++i) {
     vvv = variables[i];
     // if(datna != null){
-    dna = {}
-    data.forEach(function(e){dna[e.DateTime_UTC]=e[vvv]})
-    //   y.domain(d3.extent(datna, function(d) { return d[vvv]; })); // reset Y to get rid of NA values
-    // }else{
-    // }
-    y.domain(d3.extent(data, function(d) { return d[vvv]; })); // reset Y to get rid of NA values
+    // dna = {}
+    // data.forEach(function(e){dna[e.DateTime_UTC]=e[vvv]})
+    // //   y.domain(d3.extent(datna, function(d) { return d[vvv]; })); // reset Y to get rid of NA values
+    // // }else{
+    // // }
+    // y.domain(d3.extent(data, function(d) { return d[vvv]; })); // reset Y to get rid of NA values
+    if(datna != null){
+      dna = {}
+      datna.forEach(function(e){dna[e.DateTime_UTC]=e[vvv]})
+      y.domain(d3.extent(datna, function(d) { return d[vvv]; })); // reset Y to get rid of NA values
+    }else{
+      dna = {}
+      data.forEach(function(e){dna[e.DateTime_UTC]=e[vvv]})
+      y.domain(d3.extent(data, function(d) { return d[vvv]; })); // reset Y to get rid of NA values
+    }
     d3.select("."+vvv).select(".axis--x").call(xAxis); //redraw axis
     var line = d3.line()
         .defined(function(d){return d[vvv];})

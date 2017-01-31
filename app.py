@@ -747,7 +747,16 @@ def getqaqc():
     rss = pd.DataFrame(rss, columns=("rise","set"))
     rss.set = rss.set.shift(1)
     sunriseset = rss.loc[1:].to_json(orient='records',date_format='iso')
-    return jsonify(variables=variables, dat=xx.to_json(orient='records',date_format='iso'), sunriseset=sunriseset, flagdat=flagdat)
+    # Get 2wk plot intervals
+    def daterange(start, end):
+        r = (end+timedelta(days=1)-start).days
+        if r%14 > 0:
+            r = r+14
+        return [(end-timedelta(days=i)).strftime('%Y-%m-%d') for i in range(0,r,28)]
+    #drr = pd.date_range(sdt,edt,freq="14D").tolist()[::-1] # need to reverse
+    #drr = [da.strftime('%Y-%m-%d') for da in drr]
+    drr = daterange(sdt,edt)
+    return jsonify(variables=variables, dat=xx.to_json(orient='records',date_format='iso'), sunriseset=sunriseset, flagdat=flagdat, plotdates=drr)
 
 @app.route('/_addflag',methods=["POST"])
 def addflag():
