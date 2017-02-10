@@ -680,8 +680,8 @@ def getviz():
     flagdat = xx[['DateTime_UTC','variable','flag']].dropna().drop(['flag'],axis=1).to_json(orient='records',date_format='iso') # flag data
     xx = xx.drop('id', axis=1).drop_duplicates()\
       .set_index(["DateTime_UTC","variable"])\
-      .drop(['region','site','flag'],axis=1)\
-      .unstack('variable')
+      .drop(['region','site','flag'],axis=1)
+    xx = xx[~xx.index.duplicated(keep='first')].unstack('variable') # get rid of duplicated date/variable combos
     xx.columns = xx.columns.droplevel()
     xx = xx.reset_index()
     # Get sunrise sunset data
@@ -726,8 +726,8 @@ def getqaqc():
     variables = list(set(xx['variable'].tolist()))
     xx = xx.drop('id', axis=1).drop_duplicates()\
       .set_index(["DateTime_UTC","variable"])\
-      .drop(['region','site','flag'],axis=1)\
-      .unstack('variable')
+      .drop(['region','site','flag'],axis=1)
+    xx = xx[~xx.index.duplicated(keep='first')].unstack('variable') # get rid of duplicated date/variable combos
     xx.columns = xx.columns.droplevel()
     xx = xx.reset_index()
     # Get sunrise sunset data
@@ -812,8 +812,8 @@ def addna():
     xx.dropna(subset=['value'], inplace=True) # remove rows with NA value
     xx = xx.drop('id', axis=1).drop_duplicates()\
       .set_index(["DateTime_UTC","variable"])\
-      .drop(['region','site','flag'],axis=1)\
-      .unstack('variable')
+      .drop(['region','site','flag'],axis=1)
+    xx = xx[~xx.index.duplicated(keep='first')].unstack('variable') # get rid of duplicated date/variable combos
     xx.columns = xx.columns.droplevel()
     xx = xx.reset_index()
     return jsonify(dat=xx.to_json(orient='records',date_format='iso'))
