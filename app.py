@@ -905,6 +905,9 @@ def api():
     if len(xu) is not 0:
         # subset usgs data based on each sites' dates...
         xx = pd.concat([xx,xu])
+    # check for doubles with same datetime, region, site, variable...
+    xx = xx.set_index(["DateTime_UTC","region","site","variable"])
+    xx = xx.groupby(xx.index).first().reset_index()
     xx['DateTime_UTC'] = xx['DateTime_UTC'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
     # FLAGS
     if request.args.get('flags')=='true':
