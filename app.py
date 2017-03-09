@@ -14,7 +14,7 @@ import pandas as pd
 import numpy as np
 import requests
 import binascii
-import pysb
+#import pysb
 import os
 import re
 import config as cfg
@@ -907,7 +907,7 @@ def api():
         xx = pd.concat([xx,xu])
     # check for doubles with same datetime, region, site, variable...
     xx = xx.set_index(["DateTime_UTC","region","site","variable"])
-    xx = xx.groupby(xx.index).first().reset_index()
+    xx = xx[~xx.index.duplicated(keep='first')].reset_index()
     xx['DateTime_UTC'] = xx['DateTime_UTC'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
     # FLAGS
     if request.args.get('flags')=='true':
