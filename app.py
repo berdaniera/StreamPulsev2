@@ -641,6 +641,9 @@ def getcsv():
             xx = pd.concat([xx,xu])
     aggregate = request.form['aggregate']
     dataform = request.form['dataform'] # wide or long
+    # check for doubles with same datetime, region, site, variable...
+    xx = xx.set_index(["DateTime_UTC","region","site","variable"])
+    xx = xx[~xx.index.duplicated(keep='first')].reset_index()
     if aggregate!="none":
         xx = xx.set_index(['DateTime_UTC']).groupby(['region','site','variable']).resample(aggregate).mean().reset_index()
     if dataform=="wide":
