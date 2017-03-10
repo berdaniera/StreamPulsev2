@@ -794,11 +794,14 @@ def addflag():
     var = request.json['var']
     flg = request.json['flagid']
     cmt = request.json['comment']
+    print request.json
     for vv in var:
         fff = Flag(rgn, ste, sdt, edt, vv, flg, cmt, int(current_user.get_id()))
+        print fff
         db.session.add(fff)
         db.session.commit()
         flgdat = Data.query.filter(Data.region==rgn, Data.site==ste, Data.DateTime_UTC>=sdt, Data.DateTime_UTC<=edt, Data.variable==vv).all()
+        print flgdat
         for f in flgdat:
             f.flag = fff.id
         db.session.commit()
