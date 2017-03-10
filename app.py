@@ -789,8 +789,10 @@ def getqaqc():
 @app.route('/_addflag',methods=["POST"])
 def addflag():
     rgn, ste = request.json['site'].split("_")
-    sdt = dtparse.parse(request.json['startDate'])
-    edt = dtparse.parse(request.json['endDate'])
+    # sdt = dtparse.parse(request.json['startDate'])
+    # edt = dtparse.parse(request.json['endDate'])
+    sdt = datetime.strptime(request.json['startDate'],"%Y-%m-%dT%H:%M:%S.%fZ")
+    edt = datetime.strptime(request.json['endDate'],"%Y-%m-%dT%H:%M:%S.%fZ")
     var = request.json['var']
     flg = request.json['flagid']
     cmt = request.json['comment']
