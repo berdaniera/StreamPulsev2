@@ -8,6 +8,12 @@
   <p><i>Uploading {{filenames|length}} files:</i><br>
   {% for f in filenames %} {{f}} {% endfor %}</p>
 
+  {% if replacing %}
+    <input type="hidden" name="replacing" value="yes">
+  {% else %}
+    <input type="hidden" name="replacing" value="no">
+  {% endif %}
+
   {% if existing %}
     <input type="hidden" name="existing" value="yes">
   {% else %}

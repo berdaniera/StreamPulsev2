@@ -237,7 +237,7 @@ def read_hobo(f):
     m = [re.sub(" ","",x.split(",")[0]) for x in xt.columns.tolist()]
     u = [x.split(",")[1].split(" ")[1] for x in xt.columns.tolist()]
     tzoff = re.sub("GMT(.[0-9]{2}):([0-9]{2})","\\1",u[0])
-    ll = f.split("_")[3].split(".")[0]
+    ll = f.split("_")[3].split(".")[0].split("v")[0]
     inum = re.sub("[A-Z]{2}","",ll)
     uu = [re.sub("\\ |\\/|°","",x) for x in u[1:]]
     uu = [re.sub(r'[^\x00-\x7f]',r'', x) for x in uu] # get rid of unicode
@@ -280,11 +280,11 @@ def read_manta(f, gmtoff):
     return xt
 
 def load_file(f, gmtoff, logger):
-    if logger=="CS":
+    if "CS" in logger:
         return read_csci(f, gmtoff)
     elif "H" in logger:
         return read_hobo(f)
-    elif logger=="EM":
+    elif "EM" in logger:
         return read_manta(f, gmtoff)
     else:
         xtmp = pd.read_csv(f, parse_dates=[0])
@@ -456,11 +456,13 @@ def analytics():
 @login_required
 def upload():
     if request.method == 'POST':  # checks
+        replace = False if request.form.get('replace') is None else True
         if 'file' not in request.files:
             flash('No file part','alert-danger')
             return redirect(request.url)
         ufiles = request.files.getlist("file")
         ufnms = [x.filename for x in ufiles]
+        ld = os.listdir(app.config['UPLOAD_FOLDER'])
         ffregex = "[A-Z]{2}_.*_[0-9]{4}-[0-9]{2}-[0-9]{2}_[A-Z]{2}[0-9]?.[a-zA-Z]{3}" # core sites
         ffregex2 = "[A-Z]{2}_.*_[0-9]{4}-[0-9]{2}-[0-9]{2}.csv" # leveraged sites
         pattern = re.compile(ffregex+"|"+ffregex2)
@@ -468,13 +470,14 @@ def upload():
             # file names do not match expected pattern
             flash('Please name your files with the specified format.','alert-danger')
             return redirect(request.url)
-        if all([f in os.listdir(app.config['UPLOAD_FOLDER']) for f in ufnms]):
-            # all files already uploaded
-            flash('All of those files were already uploaded.','alert-danger')
-            return redirect(request.url)
-        if (any([f in os.listdir(app.config['UPLOAD_FOLDER']) for f in ufnms])):
-            # remove files already uploaded
-            ufiles = [f for f in ufiles if f not in os.listdir(app.config['UPLOAD_FOLDER'])]
+        if not replace: # not replacing files, need to check if files already exist
+            if all([f in ld for f in ufnms]):
+                # all files already uploaded
+                flash('All of those files were already uploaded.','alert-danger')
+                return redirect(request.url)
+            if (any([f in ld for f in ufnms])):
+                # remove files already uploaded
+                ufiles = [f for f in ufiles if f not in ld]
         site = list(set([x.split("_")[0]+"_"+x.split("_")[1] for x in ufnms]))
         if len(site)>1:
             flash('Please only select data from a single site.','alert-danger')
@@ -485,12 +488,18 @@ def upload():
         for file in ufiles:
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
+                ver = len([x for x in ld if filename.split(".")[0] in x])
+                # rename files if existing, add version number
                 fup = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(fup)
+                if replace and ver>0: # need to add version number to file
+                    fns = filename.split(".")
+                    filename = fns[0]+"v"+str(ver+1)+"."+fns[1]
+                    fup = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(fup) # save it as fup
                 # sb.upload_file_to_item(sbupf, fup)
-                filenames.append(filename)
-                fnlong.append(fup)
-        # PROCESS
+                filenames.append(filename) # this is the filename list that gets passed on for display
+                fnlong.append(fup) # this is the list of files that get processed
+        # PROCESS the data and save as tmp file
         try:
             if site[0] in core.index.tolist():
                 gmtoff = core.loc[site].GMTOFF[0]
@@ -508,7 +517,7 @@ def upload():
             rr,ss = site[0].split("_")
             cdict = pd.read_sql("select * from cols where region='"+rr+"' and site='"+ss+"'", db.engine)
             cdict = dict(zip(cdict['rawcol'],cdict['dbcol']))
-            flash("NOTE: I just updated the column naming from Hobo dataloggers. Please double check your column matching. Thanks!",'alert-danger')
+            flash("NOTE: I recently updated the column naming from Hobo dataloggers. Please double check your column matching. Thanks!",'alert-warning')
         except IOError:
             msg = Markup('Unknown error. Please <a href="mailto:aaron.berdanier@gmail.com" class="alert-link">email Aaron</a> with a copy of the file you tried to upload...')
             flash(msg,'alert-danger')
@@ -517,7 +526,7 @@ def upload():
         # check if existing site
         allsites = pd.read_sql("select concat(region,'_',site) as sitenm from site",db.engine).sitenm.tolist()
         existing = True if site[0] in allsites else False
-        return render_template('upload_columns.html', filenames=filenames, columns=columns, tmpfile=tmp_file, variables=variables, cdict=cdict, existing=existing, sitenm=site[0])
+        return render_template('upload_columns.html', filenames=filenames, columns=columns, tmpfile=tmp_file, variables=variables, cdict=cdict, existing=existing, sitenm=site[0], replacing=replace)
     return render_template('upload.html')
 
 @app.route("/upload_cancel",methods=["POST"])
@@ -541,6 +550,19 @@ def updatecdict(region, site, cdict):
             cx = Cols(region, site, c, cdict[c])
             db.session.add(cx)
             db.session.commit()
+
+def updatedb(xx, replace=False):
+    if replace: # need to go row by row... ugh!
+        for r in xx.values:
+            try: # if it exists, will return something and update the last one (since we grab the last one in the downloads)
+                # don't know if the order_by has any performance cost (prob does)... may be a better way to do this.
+                d = Data.query.order_by(Data.id.desc()).filter(Data.region==r[0], Data.site==r[1], Data.DateTime_UTC==r[2], Data.variable==r[3]).first_or_404()
+                d.value = r[4]
+            except: # doesn't exist, need to add it
+                d = Data(r[0], r[1], r[2], r[3], r[4], r[5])
+            db.session.commit()
+    else:
+        xx.to_sql("data", db.engine, if_exists='append', index=False, chunksize=1000)
 
 @app.route("/upload_confirm",methods=["POST"]) # confirm columns
 def confirmcolumns():
@@ -572,7 +594,9 @@ def confirmcolumns():
         xx['flag'] = None
         xx = xx[['region','site','DateTime_UTC','variable','value','flag']]
         # add a check for duplicates?
-        xx.to_sql("data", db.engine, if_exists='append', index=False, chunksize=1000)
+        replace = True if request.form['replacing']=='yes' else False
+        # xx.to_sql("data", db.engine, if_exists='append', index=False, chunksize=1000)
+        updatedb(xx, replace)
         updatecdict(region, site, cdict)
     except IOError:
         flash('There was an error, please try again.','alert-warning')
@@ -643,7 +667,7 @@ def getcsv():
     dataform = request.form['dataform'] # wide or long
     # check for doubles with same datetime, region, site, variable...
     xx = xx.set_index(["DateTime_UTC","region","site","variable"])
-    xx = xx[~xx.index.duplicated(keep='first')].reset_index()
+    xx = xx[~xx.index.duplicated(keep='last')].reset_index()
     if aggregate!="none":
         xx = xx.set_index(['DateTime_UTC']).groupby(['region','site','variable']).resample(aggregate).mean().reset_index()
     if dataform=="wide":
@@ -684,7 +708,7 @@ def getviz():
     xx = xx.drop('id', axis=1).drop_duplicates()\
       .set_index(["DateTime_UTC","variable"])\
       .drop(['region','site','flag'],axis=1)
-    xx = xx[~xx.index.duplicated(keep='first')].unstack('variable') # get rid of duplicated date/variable combos
+    xx = xx[~xx.index.duplicated(keep='last')].unstack('variable') # get rid of duplicated date/variable combos
     xx.columns = xx.columns.droplevel()
     xx = xx.reset_index()
     # Get sunrise sunset data
@@ -730,7 +754,7 @@ def getqaqc():
     xx = xx.drop('id', axis=1).drop_duplicates()\
       .set_index(["DateTime_UTC","variable"])\
       .drop(['region','site','flag'],axis=1)
-    xx = xx[~xx.index.duplicated(keep='first')].unstack('variable') # get rid of duplicated date/variable combos
+    xx = xx[~xx.index.duplicated(keep='last')].unstack('variable') # get rid of duplicated date/variable combos
     xx.columns = xx.columns.droplevel()
     xx = xx.reset_index()
     # Get sunrise sunset data
@@ -816,7 +840,7 @@ def addna():
     xx = xx.drop('id', axis=1).drop_duplicates()\
       .set_index(["DateTime_UTC","variable"])\
       .drop(['region','site','flag'],axis=1)
-    xx = xx[~xx.index.duplicated(keep='first')].unstack('variable') # get rid of duplicated date/variable combos
+    xx = xx[~xx.index.duplicated(keep='last')].unstack('variable') # get rid of duplicated date/variable combos
     xx.columns = xx.columns.droplevel()
     xx = xx.reset_index()
     return jsonify(dat=xx.to_json(orient='records',date_format='iso'))
@@ -910,7 +934,7 @@ def api():
         xx = pd.concat([xx,xu])
     # check for doubles with same datetime, region, site, variable...
     xx = xx.set_index(["DateTime_UTC","region","site","variable"])
-    xx = xx[~xx.index.duplicated(keep='first')].reset_index()
+    xx = xx[~xx.index.duplicated(keep='last')].reset_index()
     xx['DateTime_UTC'] = xx['DateTime_UTC'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
     # FLAGS
     if request.args.get('flags')=='true':
