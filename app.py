@@ -560,6 +560,7 @@ def updatedb(xx, replace=False):
                 d.value = r[4]
             except: # doesn't exist, need to add it
                 d = Data(r[0], r[1], r[2], r[3], r[4], r[5])
+                db.session.add(d)
             db.session.commit()
     else:
         xx.to_sql("data", db.engine, if_exists='append', index=False, chunksize=1000)
