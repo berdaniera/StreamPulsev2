@@ -3,6 +3,8 @@ spv2code
 *.dat
 *.pyc
 static/img/*
+static/metadata/*
+static/uploads/*
 spenv/*
 config*
 wsgi*
