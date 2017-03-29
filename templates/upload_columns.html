@@ -21,28 +21,47 @@
       We need to get some more information before we can process it (you only need to do this part once):</p>
     <div class="input-group input-group-sm">
       <span class="input-group-addon">Full site name</span>
-      <input type="text" class="form-control" name="sitename" aria-describedby="Site name">
+      <input type="text" class="form-control" name="sitename" aria-describedby="Site name" maxlength="50">
     </div><br>
     <i>Coordinates, decimal degrees:</i>
     <div class="input-group input-group-sm">
       <span class="input-group-addon">Latitude</span>
-      <input type="text" class="form-control" name="lat" placeholder="e.g., 36.00" aria-describedby="Latitude">
+      <input type="text" class="form-control" name="lat" placeholder="e.g., 36.00" aria-describedby="Latitude" required>
       <span class="input-group-addon">Longitude</span>
-      <input type="text" class="form-control" name="lng" placeholder="e.g., -78.97" aria-describedby="Longitude">
+      <input type="text" class="form-control" name="lng" placeholder="e.g., -78.97" aria-describedby="Longitude" required>
     </div><br>
     <div class="input-group input-group-sm">
       <span class="input-group-addon">Associated USGS gauge ID</span>
-      <input type="text" class="form-control" name="usgs" placeholder="Site ID (if none, leave blank), e.g., 02085000" aria-describedby="USGS site #">
+      <input type="text" class="form-control" name="usgs" placeholder="Site ID (if none, leave blank), e.g., 02085000" aria-describedby="USGS site #" maxlength="20">
     </div><br>
+
+    <div>
+      <p><b>Site metadata:</b> Characteristics, instruments, dates, personnel, any other information that you'd like to share with others about the data.</p>
+      <textarea class="form-control" rows="5" name="metadata" placeholder="Site characteristics, instruments, etc. Anything that you want to share with people when they download the data."></textarea>
+    </div><br>
+
+    <div class="input-group input-group-sm">
+      <span class="input-group-addon">Data set contact name</span>
+      <input type="text" class="form-control" name="contactName" aria-describedby="Contact name" maxlength="50">
+      <span class="input-group-addon">Contact email</span>
+      <input type="text" class="form-control" name="contactEmail" aria-describedby="Contact email" maxlength="255">
+    </div><br>
+
     <i>Data sharing policy:</i>
-    <div class="radio"><label>
+    <div class="checkbox">
+      <label>
+        <input type="checkbox" name="policy" required> I agree to the <a href="policy">StreamPULSE data policy</a> and confirm that this data will be shared under that policy.
+      </label>
+    </div>
+
+    <!-- <div class="radio"><label>
       <input type="radio" name="policy" id="streampulse" value="streampulse" checked> <u>StreamPULSE open data license</u>:
-        Others will be free to publicly share (copy, distribute, and use), create (produce works), and adapt (modify, transform, and build upon) this data with attribution given to the StreamPULSE project.
+        Others will be allowed to publicly share (copy, distribute, and use), create (produce works), and adapt (modify, transform, and build upon) this data with attribution given to the StreamPULSE project.
     </label></div>
     <div class="radio"><label>
       <input type="radio" name="policy" id="embargo" value="embargo"> <u>Embargoed data license</u>:
-        This data will remain private (not publicly shared online or with other StreamPULSE members) for two years from the upload date (today). After two years, the embargo will lift and the StreamPULSE open data license will take effect.
-    </label></div>
+        This data will remain private (not publicly shared online or with other StreamPULSE members) for one year from the upload date (today). After one year, the embargo will lift and the StreamPULSE open data license will take effect.
+    </label></div> -->
     <input type="hidden" name="existing" value="no">
     <br><hr>
   {% endif %}

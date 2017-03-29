@@ -24,6 +24,7 @@ app.config['SECRET_KEY'] = cfg.SECRET_KEY
 app.config['SQLALCHEMY_DATABASE_URI'] = cfg.SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = cfg.SQLALCHEMY_TRACK_MODIFICATIONS
 app.config['UPLOAD_FOLDER'] = cfg.UPLOAD_FOLDER
+app.config['META_FOLDER'] = cfg.META_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16 MB
 
 #sb.login(cfg.SB_USER,cfg.SB_PASS)
@@ -107,7 +108,9 @@ class Site(db.Model):
     addDate = db.Column(db.DateTime)
     embargo = db.Column(db.Boolean)
     by = db.Column(db.Integer)
-    def __init__(self, region, site, name, latitude, longitude, usgs, addDate, embargo, by):
+    contact = db.Column(db.String(50))
+    contactEmail = db.Column(db.String(255))
+    def __init__(self, region, site, name, latitude, longitude, usgs, addDate, embargo, by, contact, contactEmail):
         self.region = region
         self.site = site
         self.name = name
@@ -117,6 +120,8 @@ class Site(db.Model):
         self.addDate = addDate
         self.embargo = embargo
         self.by = by
+        self.contact = contact
+        self.contactEmail = contactEmail
     def __repr__(self):
         return '<Site %r, %r>' % (self.region, self.site)
 
@@ -538,6 +543,10 @@ def cancelcolumns():
     flash('Upload cancelled.','alert-primary')
     return redirect(url_for('upload'))
 
+@app.route("/policy")
+def datapolicy():
+    return render_template("datapolicy.html")
+
 def updatecdict(region, site, cdict):
     rawcols = pd.read_sql("select * from cols where region='"+region+"' and site ='"+site+"'", db.engine)
     rawcols = rawcols['rawcol'].tolist()
@@ -577,13 +586,19 @@ def confirmcolumns():
         # Add site if new site
         if request.form['existing'] == "no":
             # need to add site to list
-            embargo = False if request.form['policy']=="streampulse" else True
+            embargo = False #if request.form['policy']=="streampulse" else True
             usgss = None if request.form['usgs']=="" else request.form['usgs']
             sx = Site(region=region, site=site, name=request.form['sitename'],
                 latitude=request.form['lat'], longitude=request.form['lng'], usgs=usgss,
-                addDate=datetime.utcnow(), embargo=embargo, by=current_user.get_id())
+                addDate=datetime.utcnow(), embargo=embargo, by=current_user.get_id(),
+                contact=request.form['contactName'], contactEmail=request.form['contactEmail'])
             db.session.add(sx)
             db.session.commit()
+            # need to make a new text file with the metadata
+            metastring = request.form['metadata']
+            metafilepath = os.path.join(app.config['META_FOLDER'],region+"_"+site+"_metadata.txt")
+            with open(metafilepath, 'a') as metafile:
+                metafile.write(metastring)
         xx = xx.set_index("DateTime_UTC")
         xx.columns.name = 'variable'
         xx = xx.stack()
