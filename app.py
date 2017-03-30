@@ -5,6 +5,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sunrise_sunset import SunriseSunset as suns
 from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
+from itsdangerous import URLSafeTimedSerializer
+from flask_mail import Mail,  Message
 from datetime import datetime, timedelta
 from dateutil import parser as dtparse
 from math import log, sqrt, floor
@@ -26,6 +28,14 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = cfg.SQLALCHEMY_TRACK_MODIFICATION
 app.config['UPLOAD_FOLDER'] = cfg.UPLOAD_FOLDER
 app.config['META_FOLDER'] = cfg.META_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16 MB
+app.config['SECURITY_PASSWORD_SALT'] = cfg.SECURITY_PASSWORD_SALT
+app.config['MAIL_SERVER'] = "smtp.gmail.com"
+app.config["MAIL_PORT"] = 465
+app.config["MAIL_USE_SSL"] = True
+app.config["MAIL_USE_TLS"] = False
+app.config["MAIL_DEFAULT_SENDER"] = ("Aaron from StreamPULSE","aaron.berdanier@gmail.com")
+app.config["MAIL_USERNAME"] = cfg.MAIL_USERNAME
+app.config["MAIL_PASSWORD"] = cfg.MAIL_PASSWORD
 
 #sb.login(cfg.SB_USER,cfg.SB_PASS)
 #sbupf = sb.get_item(cfg.SB_UPFL)
@@ -399,6 +409,23 @@ def authenticate_sites(sites,user=None,token=None):
         xx = xx[(xx['embargo']==0)] # return
     return [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
 
+def generate_confirmation_token(email):
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    return serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
+
+def confirm_token(token, expiration=3600*24): # expires in one day
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    try:
+        email = serializer.loads(token,
+            salt=app.config['SECURITY_PASSWORD_SALT'],
+            max_age=expiration)
+    except:
+        return False
+    return email
+
+def send_email(to, subject, template):
+    mail.send_message(subject, recipients=[to], html=template)
+
 ########## PAGES
 @app.route('/register' , methods=['GET','POST'])
 def register():
@@ -408,6 +435,42 @@ def register():
     db.session.add(user)
     db.session.commit()
     flash('User successfully registered', 'alert-success')
+    return redirect(url_for('login'))
+
+@app.route('/resetpass', methods=['GET','POST'])
+def resetpass():
+    if request.method == 'GET':
+        return render_template('reset.html')
+    email = request.form['email']
+    try:
+        user = User.query.filter(User.email==email).first_or_404()
+    except: # email is not confirmed
+        flash('We couldn't find an account with that email.', 'alert-danger')
+        return redirect(url_for('resetpass'))
+    token = generate_confirmation_token(email)
+    register_url = url_for('resetpass_confirm', token=token, _external=True)
+    html = render_template('activatelink.html', confirm_url=register_url)
+    subject = "Reset StreamPULSE password"
+    send_email(user.email, subject, html)
+    flash('Got it! Please check your email to finish.', 'alert-success')
+    return redirect(url_for('index'))
+
+@app.route('/resetpass/<token>' , methods=['GET','POST'])
+def resetpass_confirm(token):
+    if request.method == 'GET':
+        try:
+            email = confirm_token(token)
+            user = User.query.filter(User.email==email).first_or_404()
+        except: # email is not confirmed
+            flash('The confirmation link is invalid or has expired.', 'alert-danger')
+            return redirect(url_for('index'))
+        return render_template('resetpass.html', email=email) # email is good.
+    # posting new password
+    user = User.query.filter(User.email==request.form['email']).first_or_404()
+    user.password = generate_password_hash(request.form['password'])
+    db.session.add(user)
+    db.session.commit()
+    flash('Successfully reset, please login.', 'alert-success')
     return redirect(url_for('login'))
 
 @app.route('/login',methods=['GET','POST'])
