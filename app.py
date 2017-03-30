@@ -445,7 +445,7 @@ def resetpass():
     try:
         user = User.query.filter(User.email==email).first_or_404()
     except: # email is not confirmed
-        flash('We couldn't find an account with that email.', 'alert-danger')
+        flash("We couldn't find an account with that email.", 'alert-danger')
         return redirect(url_for('resetpass'))
     token = generate_confirmation_token(email)
     register_url = url_for('resetpass_confirm', token=token, _external=True)
