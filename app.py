@@ -340,7 +340,7 @@ def wash_ts(x):
     if x.columns.tolist()[0] != cx: # move date time to first column
         x = x[[cx]+[xo for xo in x.columns.tolist() if xo!=cx]]
     x = x.rename(columns={x.columns.tolist()[0]:'DateTime_UTC'})
-    x = x.set_index("DateTime_UTC").sort_index().apply(lambda x: pd.to_numeric(x, errors='coerce')).resample('15Min').mean().dropna()
+    x = x.set_index("DateTime_UTC").sort_index().apply(lambda x: pd.to_numeric(x, errors='coerce')).resample('15Min').mean().dropna(how='all')
     return x
 
 def panda_usgs(x,jsof):
