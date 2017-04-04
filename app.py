@@ -724,7 +724,6 @@ def getstats():
 
 @app.route('/_getcsv',methods=["POST"])
 def getcsv():
-    print request.form
     sitenm = request.form['site'].split(",")
     startDate = request.form['startDate']#.split("T")[0]
     endDate = request.form['endDate']
@@ -748,7 +747,7 @@ def getcsv():
     dataform = request.form['dataform'] # wide or long
     # check for doubles with same datetime, region, site, variable...
     xx = xx.set_index(["DateTime_UTC","region","site","variable"])
-    xx = xx[~xx.index.duplicated(keep='last')].reset_index()
+    xx = xx[~xx.index.duplicated(keep='last')].sort_index().reset_index()
     if aggregate!="none":
         xx = xx.set_index(['DateTime_UTC']).groupby(['region','site','variable']).resample(aggregate).mean().reset_index()
     if dataform=="wide":
