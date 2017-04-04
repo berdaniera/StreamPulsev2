@@ -383,14 +383,16 @@ def get_usgs(regionsite, startDate, endDate, vvv=['00060','00065']):
         x2 = x2.sort_index().apply(lambda x: pd.to_numeric(x, errors='coerce')).resample('15Min').mean()
         x2['site']=sitedict[s]
         xoo.append(x2.reset_index())
+    #
     xx = pd.concat(xoo)
     xx = xx.set_index(['DateTime_UTC','site'])
     xx.columns.name='variable'
     xx = xx.stack()
     xx.name="value"
     xx = xx.reset_index()
-    xx[['region','site']] = xx['site'].apply(lambda x: pd.Series(x.split("_")))
-    return xx
+    xx[['region','site']] = xx['site'].str.split("_",expand=True)
+    xx.head()
+    return xx[['DateTime_UTC','region','site','variable','value']]
 
 def authenticate_sites(sites,user=None,token=None):
     ss = []
