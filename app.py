@@ -63,6 +63,22 @@ class Data(db.Model):
     def __repr__(self):
         return '<Data %r, %r, %r, %r>' % (self.region, self.site, self.DateTime_UTC, self.variable)
 
+class Manual(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    region = db.Column(db.String(10))
+    site = db.Column(db.String(50))
+    DateTime_UTC = db.Column(db.DateTime)
+    variable = db.Column(db.String(50))
+    value = db.Column(db.Float)
+    def __init__(self, region, site, DateTime_UTC, variable, value):
+        self.region = region
+        self.site = site
+        self.DateTime_UTC = DateTime_UTC
+        self.variable = variable
+        self.value = value
+    def __repr__(self):
+        return '<Manual %r, %r, %r, %r>' % (self.region, self.site, self.DateTime_UTC, self.variable)
+
 class Flag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     region = db.Column(db.String(10))
@@ -502,19 +518,14 @@ def logout():
 def index():
     nuse = pd.read_sql("select count(id) as n from user", db.engine)
     nobs = pd.read_sql("select count(id) as n from data", db.engine)
-    return render_template('index.html',nobs="{:,}".format(nobs.n.sum()),nuse=nuse.n[0],nmod=0)
+    nsit = pd.read_sql("select count(id) as n from site", db.engine)
+    return render_template('index.html',nobs="{:,}".format(nobs.n.sum()), nuse=nuse.n[0], nsit=nsit.n[0])
 
 @app.route('/analytics')
 def analytics():
-    # sqlq = "select A.region, A.site, B.name, B.latitude, B.longitude, A.value "+\
-    #     "from (select region, site, count(value) as value from data group by region, site) A "+\
-    #     "left join site B on A.region = B.region and A.site = B.site"
-    # res = pd.read_sql(sqlq, db.engine)
     ss = pd.read_sql_table('site',db.engine).set_index(['site','region'])
     sqlq = 'select region, site, count(region) as value from data group by region, site'
     xx = pd.read_sql(sqlq, db.engine).set_index(['site','region'])
-    # xx = pd.read_sql_table('data',db.engine)
-    # xx = pd.DataFrame(xx.groupby(['site','region']).value.count())
     res = xx.merge(ss,"left",left_index=True,right_index=True)
     res = res.reset_index()
     res = res[['region','site','name','latitude','longitude','value']]
@@ -597,7 +608,12 @@ def upload():
         allsites = pd.read_sql("select concat(region,'_',site) as sitenm from site",db.engine).sitenm.tolist()
         existing = True if site[0] in allsites else False
         return render_template('upload_columns.html', filenames=filenames, columns=columns, tmpfile=tmp_file, variables=variables, cdict=cdict, existing=existing, sitenm=site[0], replacing=replace)
-    return render_template('upload.html')
+    if request.method == 'GET':
+        xx = pd.read_sql("select distinct region, site from data", db.engine)
+        vv = pd.read_sql("select distinct variable from data", db.engine)['variable'].tolist()
+        sites = [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
+        sitedict = sorted([getsitenames(x) for x in sites], key=lambda tup: tup[1])
+        return render_template('upload.html', sites=sitedict, variables = map(str,vv))
 
 @app.route("/upload_cancel",methods=["POST"])
 def cancelcolumns():
@@ -607,6 +623,19 @@ def cancelcolumns():
     [os.remove(os.path.join(app.config['UPLOAD_FOLDER'],x)) for x in ofiles] # remove tmp files
     flash('Upload cancelled.','alert-primary')
     return redirect(url_for('upload'))
+
+@app.route("/_addmanualdata",methods=["POST"])
+def manual_upload():
+    rgn, ste = request.json['site'].split("_")
+    data = [d for d in request.json['data'] if None not in d] # get all complete rows
+    dd = pd.DataFrame(data,columns=["DateTime_UTC","variable","value"])
+    dd['DateTime_UTC'] = pd.to_datetime(dd['DateTime_UTC'],format='%Y-%m-%d %H:%M')
+    dd['DateTime_UTC'] = pd.DatetimeIndex(dd['DateTime_UTC']).round("15Min")
+    dd['region'] = rgn
+    dd['site'] = ste
+    dd['value'] = pd.to_numeric(dd['value'], errors='coerce')
+    dd.to_sql("manual", db.engine, if_exists='append', index=False, chunksize=1000)
+    return jsonify(result="success")
 
 @app.route("/policy")
 def datapolicy():
@@ -1019,7 +1048,7 @@ def api():
         xx = pd.concat([xx,xu])
     # check for doubles with same datetime, region, site, variable...
     xx = xx.set_index(["DateTime_UTC","region","site","variable"])
-    xx = xx[~xx.index.duplicated(keep='last')].reset_index()
+    xx = xx[~xx.index.duplicated(keep='last')].sort_index().reset_index()
     xx['DateTime_UTC'] = xx['DateTime_UTC'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S'))
     # FLAGS
     if request.args.get('flags')=='true':

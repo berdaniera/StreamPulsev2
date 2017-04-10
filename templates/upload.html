@@ -1,4 +1,9 @@
 {% extends "layout.html" %}
+{% block headcode %}
+<script src="static/hot/handsontable.full.js"></script>
+<link rel="stylesheet" media="screen" href="static/hot/handsontable.full.css">
+{% endblock %}
+
 {% block body %}
 
 <div id="loading"><span id="loading-image">
@@ -7,7 +12,7 @@
 
 <div class="row">
 <div class="col-md-6 col-md-offset-3">
-<h1>Upload Data</h1>
+<h1>Upload Sensor Data</h1>
 <p class="lead">Only select files <b>from a single site</b> with each upload. See instructions below for more information.<p>
 <hr>
 
@@ -21,71 +26,69 @@
   <button id="upx" type="submit" value=Upload class="btn btn-primary btn-block">Upload</button>
 </form>
 
-<hr>
+<br>
+<i>Expand instructions:</i> <button data-toggle="collapse" class="btn btn-default" data-target="#coreinst">Core sites</button> <button data-toggle="collapse" class="btn btn-default" data-target="#levinst">Leveraged sites</button>
+<p class="text-muted">Core sites are those funded by the grant. Leveraged sites are those with a different sensor-datalogger array.</p>
 
-  <i>Expand instructions:</i><br>
-  <button data-toggle="collapse" class="btn btn-default" data-target="#coreinst">Core sites</button> <button data-toggle="collapse" class="btn btn-default" data-target="#levinst">Leveraged sites</button>
-  <p class="text-muted">Core sites are those funded by the grant. Leveraged sites are those with a different sensor-datalogger array.</p>
+<div id="coreinst" class="collapse">
+  <p class="lead"><b>StreamPULSE core sites</b> can upload raw datalogger files and/or pre-formatted data.</p>
 
-  <div id="coreinst" class="collapse">
-    <p class="lead"><b>StreamPULSE core sites</b> can upload raw datalogger files and/or pre-formatted data.</p>
+  <h3>File naming</h3>
+  <p>Name your upload file &ndash; <code>REGIONID_SITEID_YYYY-MM-DD_LOGGERID.xxx</code> &ndash; where</p>
+  <ul>
+  <li><code>REGIONID</code> is the name of your region (PR, FL, NC, WI, or AZ),</li>
+  <li><code>SITEID</code> is your unique site name,</li>
+  <li><code>YYYY-MM-DD</code> is the download date, and</li>
+  <li><code>LOGGERID.xxx</code> is the logger routing code:
+  <ul>
+  <li><code>CS.dat</code>: CR1000 data file</li>
+  <li><code>HD.csv</code>: Hobo DO logger</li>
+  <li><code>HW.csv</code>: Hobo water pressure logger</li>
+  <li><code>HA.csv</code>: Hobo air pressure logger</li>
+  <li><code>HP.csv</code>: Hobo light pendant logger</li>
+  <li><code>EM.csv</code>: Eureka Manta logger</li>
+  <li><code>XX.csv</code>: Calibrated and formatted data</li>
+  </ul></li>
+  </ul>
 
-    <h3>File naming</h3>
-    <p>Name your upload file &ndash; <code>REGIONID_SITEID_YYYY-MM-DD_LOGGERID.xxx</code> &ndash; where</p>
-    <ul>
-    <li><code>REGIONID</code> is the name of your region (PR, FL, NC, WI, or AZ),</li>
-    <li><code>SITEID</code> is your unique site name,</li>
-    <li><code>YYYY-MM-DD</code> is the download date, and</li>
-    <li><code>LOGGERID.xxx</code> is the logger routing code:
-    <ul>
-    <li><code>CS.dat</code>: CR1000 data file</li>
-    <li><code>HD.csv</code>: Hobo DO logger</li>
-    <li><code>HW.csv</code>: Hobo water pressure logger</li>
-    <li><code>HA.csv</code>: Hobo air pressure logger</li>
-    <li><code>HP.csv</code>: Hobo light pendant logger</li>
-    <li><code>EM.csv</code>: Eureka Manta logger</li>
-    <li><code>XX.csv</code>: Calibrated and formatted data</li>
-    </ul></li>
-    </ul>
+  <h3>Calibrated and formatted data</h3>
+  <p>You can upload raw data (from the datalogger) <em>and/or</em> calibrated data (e.g., turbidity in NTU, water level or discharge, etc.) at the same time.</p>
+  <p>If you modify a datalogger file to generate calibrated and derived variables, you must save it as a <code>.csv</code> with:</p>
+  <ul>
+  <li>the <code>_XX.csv</code> extension,</li>
+  <li>one header row followed directly by data rows, one row per timestamp,</li>
+  <li>the <em>first column</em> as a Date-Time stamp converted to UTC standard time and formatted as: <code>YYYY-MM-DD HH:MM:SS</code>, and</li>
+  <li>additional columns for each data variable.</li>
+  </ul>
 
-    <h3>Calibrated and formatted data</h3>
-    <p>You can upload raw data (from the datalogger) <em>and/or</em> calibrated data (e.g., turbidity in NTU, water level or discharge, etc.) at the same time.</p>
-    <p>If you modify a datalogger file to generate calibrated and derived variables, you must save it as a <code>.csv</code> with:</p>
-    <ul>
-    <li>the <code>_XX.csv</code> extension,</li>
-    <li>one header row followed directly by data rows, one row per timestamp,</li>
-    <li>the <em>first column</em> as a Date-Time stamp converted to UTC standard time and formatted as: <code>YYYY-MM-DD HH:MM:SS</code>, and</li>
-    <li>additional columns for each data variable.</li>
-    </ul>
+  <h3>Variables</h3>
+  <p>Potential variables include:</p>
+  <ul>
+  <li>Date-Time (UTC)</li>
+  <li>DO (mg/L)</li>
+  <li>Saturation DO (mg/L)</li>
+  <li>Water Temperature (°C)</li>
+  <li>Water Pressure (kPa)</li>
+  <li>Air Temperature (°C)</li>
+  <li>Air Pressure (kPa)</li>
+  <li>Depth (m)</li>
+  <li>Discharge (m3/s)</li>
+  <li>Velocity (m/s)</li>
+  <li>Light, PAR (μmol/m2/s)</li>
+  <li>Light, lux</li>
+  <li>Specific Conductivity (mS/cm or μS/cm)</li>
+  <li>pH</li>
+  <li>fDOM (frac)</li>
+  <li>fDOM (mV from sensor)</li>
+  <li>Turbidity (NTU)</li>
+  <li>Turbidity (mV from sensor)</li>
+  <li>Nitrate (mg/L)</li>
+  <li>CO2 (ppm)</li>
+  </ul>
 
-    <h3>Variables</h3>
-    <p>Potential variables include:</p>
-    <ul>
-    <li>Date-Time (UTC)</li>
-    <li>DO (mg/L)</li>
-    <li>Saturation DO (mg/L)</li>
-    <li>Water Temperature (°C)</li>
-    <li>Water Pressure (kPa)</li>
-    <li>Air Temperature (°C)</li>
-    <li>Air Pressure (kPa)</li>
-    <li>Depth (m)</li>
-    <li>Discharge (m3/s)</li>
-    <li>Velocity (m/s)</li>
-    <li>Light, PAR (μmol/m2/s)</li>
-    <li>Light, lux</li>
-    <li>Specific Conductivity (mS/cm or μS/cm)</li>
-    <li>pH</li>
-    <li>fDOM (frac)</li>
-    <li>fDOM (mV from sensor)</li>
-    <li>Turbidity (NTU)</li>
-    <li>Turbidity (mV from sensor)</li>
-    <li>Nitrate (mg/L)</li>
-    <li>CO2 (ppm)</li>
-    </ul>
-
-    <h3>Date formatting help for calibrated files</h3>
-    <p>Date-time stamps can be challenging to format.</p>
-    <p>In <code>R</code> you can create a &#39;POSIXct&#39; object. Below is an example converting a date-time string to the correct format:</p>
+  <h3>Date formatting help for calibrated files</h3>
+  <p>Date-time stamps can be challenging to format.</p>
+  <p>In <code>R</code> you can create a &#39;POSIXct&#39; object. Below is an example converting a date-time string to the correct format:</p>
 <pre>datetimeorig &lt;- &quot;8/31/16 13:24:16&quot; # can also be a vector
 # In POSIX, 1. designate the format to match the original date time
 #  and 2. specify the timezone... a full list can be viewed by running OlsonNames()
@@ -94,72 +97,72 @@ dtval &lt;- as.POSIXct(datetimeorig, format=&quot;%m/%d/%y %H:%M:%S&quot;, tz=&q
 attr(dtval,&quot;tzone&quot;) &lt;- &quot;UTC&quot;
 # The output will be 2016-08-31T18:24:16Z
 </pre>
-    <p>The as.POSIXct function can convert any date-time format and any time zone. For details on all of the format structure codes, <a href="https://stat.ethz.ch/R-manual/R-devel/library/base/html/strptime.html">see the R documentation</a>.</p>
-    <p>In <code>matlab</code> you can create a date time string with the numeric values for your timestamp, accounting for the UTC offset:</p>
+  <p>The as.POSIXct function can convert any date-time format and any time zone. For details on all of the format structure codes, <a href="https://stat.ethz.ch/R-manual/R-devel/library/base/html/strptime.html">see the R documentation</a>.</p>
+  <p>In <code>matlab</code> you can create a date time string with the numeric values for your timestamp, accounting for the UTC offset:</p>
 <pre>time.UTC = -5; % UTC offset for EST
 timeVec = [time.year time.month time.day time.hour-time.UTC time.min time.sec];
 timeStr = datestr(timeVec,&#39;yyyy-mm-dd HH:MM:SS&#39;); % what you will save
 </pre>
-    <p>In <code>Excel</code> you can modify the timestamp with a formula based on the timezone offset:</p>
-    <pre>=TimeCell+(tzOffsetHours/24)</pre>
-    <p>Then modify the cell format of the new column with a &ldquo;custom&rdquo; type to match <code>YYYY-MM-DD HH:MM:SS</code> (<a href="https://support.office.com/en-us/article/Format-a-date-the-way-you-want-8e10019e-d5d8-47a1-ba95-db95123d273e">see documentation</a>).</p>
-    <p>Be sure to put the modified date-time stamp as the first column in your exported <code>.csv</code>.</p>
+  <p>In <code>Excel</code> you can modify the timestamp with a formula based on the timezone offset:</p>
+  <pre>=TimeCell+(tzOffsetHours/24)</pre>
+  <p>Then modify the cell format of the new column with a &ldquo;custom&rdquo; type to match <code>YYYY-MM-DD HH:MM:SS</code> (<a href="https://support.office.com/en-us/article/Format-a-date-the-way-you-want-8e10019e-d5d8-47a1-ba95-db95123d273e">see documentation</a>).</p>
+  <p>Be sure to put the modified date-time stamp as the first column in your exported <code>.csv</code>.</p>
 
-    <h3>Saving files</h3>
-    <p>Exporting a <code>.csv</code> from R is easy with the <code>readr</code> package, which saves files without row names and preserves the ISO date-time format:</p>
+  <h3>Saving files</h3>
+  <p>Exporting a <code>.csv</code> from R is easy with the <code>readr</code> package, which saves files without row names and preserves the ISO date-time format:</p>
 <pre>library(readr)
 write_csv(datatable, path=&quot;NC_Eno_2016-10-13_XX.csv&quot;)
 </pre>
-  </div>
-  <div id="levinst" class="collapse">
-    <p class="lead"><b>Leveraged sites</b> need to format the data prior to upload as a <code>.csv</code> file with:</p>
-    <ul>
-    <li>the specified file name (see below),</li>
-    <li>one header row followed directly by data rows, one row per timestamp,</li>
-    <li>the first column as a Date-Time stamp converted to UTC standard time and formatted as: <code>YYYY-MM-DD HH:MM:SS</code>, and</li>
-    <li>additional columns for each data variable.</li>
-    </ul>
-    <p>If you are uploading updated data from an existing site, please only include the most recent data (since your last upload) in your file &ndash; our system saves the full uploaded file each time and redundant data just use extra bandwidth.</p>
+</div>
+<div id="levinst" class="collapse">
+  <p class="lead"><b>Leveraged sites</b> need to format the data prior to upload as a <code>.csv</code> file with:</p>
+  <ul>
+  <li>the specified file name (see below),</li>
+  <li>one header row followed directly by data rows, one row per timestamp,</li>
+  <li>the first column as a Date-Time stamp converted to UTC standard time and formatted as: <code>YYYY-MM-DD HH:MM:SS</code>, and</li>
+  <li>additional columns for each data variable.</li>
+  </ul>
+  <p>If you are uploading updated data from an existing site, please only include the most recent data (since your last upload) in your file &ndash; our system saves the full uploaded file each time and redundant data just use extra bandwidth.</p>
 
-    <h3>Variables</h3>
-    <p>The minimum set of variables for upload are:</p>
-    <ul>
-    <li>Date-Time (UTC)</li>
-    <li>Water Temperature (°C)</li>
-    <li>DO (mg/L)</li>
-    <li>Saturation DO (mg/L) <em>and/or</em> Air Pressure (kPa)</li>
-    <li>Depth (m) <em>and/or</em> Discharge (m3/s) <em>and/or</em> Velocity (m/s)</li>
-    </ul>
+  <h3>Variables</h3>
+  <p>The minimum set of variables for upload are:</p>
+  <ul>
+  <li>Date-Time (UTC)</li>
+  <li>Water Temperature (°C)</li>
+  <li>DO (mg/L)</li>
+  <li>Saturation DO (mg/L) <em>and/or</em> Air Pressure (kPa)</li>
+  <li>Depth (m) <em>and/or</em> Discharge (m3/s) <em>and/or</em> Velocity (m/s)</li>
+  </ul>
 
-    <p>Bonus variables include:</p>
-    <ul>
-    <li>Light, PAR (μmol/m2/s)</li>
-    <li>Light, lux</li>
-    <li>Specific Conductivity (mS/cm or μS/cm)</li>
-    <li>pH</li>
-    <li>fDOM (frac)</li>
-    <li>fDOM (mV from sensor)</li>
-    <li>Turbidity (NTU)</li>
-    <li>Turbidity (mV from sensor)</li>
-    <li>Nitrate (mg/L)</li>
-    <li>CO2 (ppm)</li>
-    <li>Water Pressure (kPa)</li>
-    <li>Air Temperature (°C)</li>
-    <li>Air Pressure (kPa)</li>
-    </ul>
-    <p><em>Convert your variables to one of these formats prior to uploading (check your units!).</em></p>
+  <p>Bonus variables include:</p>
+  <ul>
+  <li>Light, PAR (μmol/m2/s)</li>
+  <li>Light, lux</li>
+  <li>Specific Conductivity (mS/cm or μS/cm)</li>
+  <li>pH</li>
+  <li>fDOM (frac)</li>
+  <li>fDOM (mV from sensor)</li>
+  <li>Turbidity (NTU)</li>
+  <li>Turbidity (mV from sensor)</li>
+  <li>Nitrate (mg/L)</li>
+  <li>CO2 (ppm)</li>
+  <li>Water Pressure (kPa)</li>
+  <li>Air Temperature (°C)</li>
+  <li>Air Pressure (kPa)</li>
+  </ul>
+  <p><em>Convert your variables to one of these formats prior to uploading (check your units!).</em></p>
 
-    <h3>File naming</h3>
-    <p>Name your upload file &ndash; <code>REGIONID_SITEID_YYYY-MM-DD.csv</code> &ndash; where</p>
-    <ul>
-    <li><code>REGIONID</code> is the name of your region (US: <a href="https://en.wikipedia.org/wiki/Federal_Information_Processing_Standard_state_code">FIPS state code</a>; International: <a href="https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2">ISO 3166-1 alpha-2 code</a>),</li>
-    <li><code>SITEID</code> is your chosen unique site name (only alphanumeric characters, any length you want), and</li>
-    <li><code>YYYY-MM-DD</code> is the download date or the last date in the timeseries.</li>
-    </ul>
+  <h3>File naming</h3>
+  <p>Name your upload file &ndash; <code>REGIONID_SITEID_YYYY-MM-DD.csv</code> &ndash; where</p>
+  <ul>
+  <li><code>REGIONID</code> is the name of your region (US: <a href="https://en.wikipedia.org/wiki/Federal_Information_Processing_Standard_state_code">FIPS state code</a>; International: <a href="https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2">ISO 3166-1 alpha-2 code</a>),</li>
+  <li><code>SITEID</code> is your chosen unique site name (only alphanumeric characters, any length you want), and</li>
+  <li><code>YYYY-MM-DD</code> is the download date or the last date in the timeseries.</li>
+  </ul>
 
-    <h3>Date formatting help</h3>
-    <p>Date-time stamps can be challenging to format.</p>
-    <p>In <code>R</code> you can create a &#39;POSIXct&#39; object. Below is an example converting a date-time string to the correct format:</p>
+  <h3>Date formatting help</h3>
+  <p>Date-time stamps can be challenging to format.</p>
+  <p>In <code>R</code> you can create a &#39;POSIXct&#39; object. Below is an example converting a date-time string to the correct format:</p>
 <pre>datetimeorig &lt;- &quot;8/31/16 13:24:16&quot; # can also be a vector
 # In POSIX, we 1. designate the format to match the original date time
 #     and 2. specify the timezone... a full list can be viewed by running OlsonNames()
@@ -168,28 +171,121 @@ dtval &lt;- as.POSIXct(datetimeorig, format=&quot;%m/%d/%y %H:%M:%S&quot;, tz=&q
 attr(dtval,&quot;tzone&quot;) &lt;- &quot;UTC&quot;
 # The output will be 2016-08-31T18:24:16Z
 </pre>
-    <p>The as.POSIXct function can convert any date-time format and any time zone. For details on all of the format structure codes, <a href="https://stat.ethz.ch/R-manual/R-devel/library/base/html/strptime.html">see the R documentation</a>.</p>
-    <p>In <code>matlab</code> you can create a date time string with the numeric values for your timestamp, accounting for the UTC offset:</p>
+  <p>The as.POSIXct function can convert any date-time format and any time zone. For details on all of the format structure codes, <a href="https://stat.ethz.ch/R-manual/R-devel/library/base/html/strptime.html">see the R documentation</a>.</p>
+  <p>In <code>matlab</code> you can create a date time string with the numeric values for your timestamp, accounting for the UTC offset:</p>
 <pre>time.UTC = -5; % UTC offset for EST
 timeVec = [time.year time.month time.day time.hour-time.UTC time.min time.sec];
 timeStr = datestr(timeVec,&#39;yyyy-mm-dd HH:MM:SS&#39;); % what you will save
 </pre>
-    <p>In <code>Excel</code> you can modify the timestamp with a formula based on the timezone offset:</p>
+  <p>In <code>Excel</code> you can modify the timestamp with a formula based on the timezone offset:</p>
 <pre>=TimeCell+(tzOffsetHours/24)</pre>
-    <p>Then modify the cell format of the new column with a &ldquo;custom&rdquo; type to match <code>YYYY-MM-DD HH:MM:SS</code> (<a href="https://support.office.com/en-us/article/Format-a-date-the-way-you-want-8e10019e-d5d8-47a1-ba95-db95123d273e">see documentation</a>).</p>
-    <p>Be sure to put the modified date-time stamp as the first column in your exported <code>.csv</code>.</p>
+  <p>Then modify the cell format of the new column with a &ldquo;custom&rdquo; type to match <code>YYYY-MM-DD HH:MM:SS</code> (<a href="https://support.office.com/en-us/article/Format-a-date-the-way-you-want-8e10019e-d5d8-47a1-ba95-db95123d273e">see documentation</a>).</p>
+  <p>Be sure to put the modified date-time stamp as the first column in your exported <code>.csv</code>.</p>
 
-    <h3>Saving files</h3>
-    <p>Exporting a <code>.csv</code> from R is easy with the <code>readr</code> package, which saves files without row names and preserves the ISO date-time format:</p>
+  <h3>Saving files</h3>
+  <p>Exporting a <code>.csv</code> from R is easy with the <code>readr</code> package, which saves files without row names and preserves the ISO date-time format:</p>
 <pre>library(readr)
 write_csv(datatable, path=&quot;NC_Eno_2016-10-13.csv&quot;)
 </pre>
+</div>
+
+<hr>
+</div></div>
+
+
+
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <h1>Upload Manual Data</h1>
+    <button data-toggle="collapse" class="btn btn-block" data-target="#manualdata">Expand manual data form</button>
   </div>
-
+</div>
+<br>
+<div id="manualdata" class="collapse">
+  <div class="row"><div class="col-xs-12"><div id="datatemp"></div></div></div><br><br>
+  <div class="row"><div class="col-md-6 col-md-offset-3">
+    <select placeholder="Choose a site" id="usite" name="site">
+      <option value="">Choose a site</option>
+      {% for sv, sn in sites %}
+      <option value="{{sv}}">{{sn}}</option>
+      {% endfor %}
+    </select>
+    <textarea class="form-control" rows="4" placeholder="Enter field notes"></textarea><br>
+    <button class="btn btn-primary btn-block" name="submit" type="submit" id="addmanualdata">Add data</button>
+  </div></div><br><br>
 </div>
 
+<script>
+$('#usite').selectize({
+    delimiter: ',',
+    persist: false,
+    create: function(input) { return {value: input,text: input} }
+});
 
-</div>
+var hot;
+var container = document.getElementById('datatemp');
+var nrow = 5;
+// var variables = ['DO_mgl','var2','var3'];
+var variables = {{ variables|safe }}
+variables.push("")
+
+var wid = $(".container").width();
+
+$(document).ready(function () {
+  var data = [[]];
+  hot = new Handsontable(container,
+  {
+    data: data,
+    stretchH: 'none',
+    colWidths: [wid/3, wid/3, wid/3],
+    minRows: nrow,
+    minCols: 3,
+    minSpareRows: 1,
+    colHeaders: ['DateTime_UTC (YYYY-MM-DD hh:mm)','Variable','Value'],
+    columns: [
+    	{data:'date', validator: /^([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}(:[0-9]{2}(.[0-9]*)?)?)$/, allowInvalid: false},
+	    {data:'variable', type:'dropdown', source: variables},
+			{data:'value', validator: /^([+-]?([0-9]*)(\.([0-9]+))?)$/, allowInvalid: false}
+    ],
+    contextMenu: true
+  });
+});
+
+function alertbox(alrt,msg){
+  return '<div class="alert alert-dismissible alert-'+alrt+'">\
+    <button class="close" data-dismiss="alert" aria-label="close">&times;</button>\
+    '+msg+'</div>'
+}
+
+$(function(){
+  $("#addmanualdata").click(function(){
+    dat = {}
+    dat['site'] = $('select[name=site]').val();
+    dat['data'] = hot.getData(); //gets JSON
+    dat['fieldnotes'] = $('textarea').val();
+    console.log(dat);
+    $.ajax({
+      type: 'POST',
+      url:'/_addmanualdata',
+      data: JSON.stringify(dat),
+      contentType: 'application/json;charset=UTF-8',
+      success: function(response){
+        console.log("success")
+        hot.updateSettings({data:[]})
+        $("#alerts").append(alertbox('success','Added your observations.'))
+      },
+      error: function(error){
+        console.log(error);
+      }
+    });
+    return false;
+  });
+})
+
+
+</script>
+
+
 
 <script>
 $(function(){
