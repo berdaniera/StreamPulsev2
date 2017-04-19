@@ -32,24 +32,29 @@
 <span class="rfn">library(</span>jsonlite<span class="rfn">)</span>
 <span class="rfn">library(</span>tidyr<span class="rfn">)</span>
 <span class="rfn">library(</span>dplyr<span class="rfn">)</span>
-<span class="rfn">library(</span>devtools<span class="rfn">)</span>
+
 <span class="rcmt"># This sources our StreamPULSE functions from GitHub.</span>
-<span class="rfn">suppressMessages(source_gist(</span>"2626629e50d191394285a61a0c678779"<span class="rfn">))</span>
+spfunctions <- <span class="rfn">GET(</span>"https://raw.githubusercontent.com/berdaniera/StreamPulsev2/master/sp_functions.R"<span class="rfn">)</span>
+<span class="rfn">eval(parse(</span>text = <span class="rfn">content(</span>spfunctions,as="text",encoding="UTF-8"<span class="rfn">))</span>, envir= .GlobalEnv<span class="rfn">)</span>
+
+<span class="rcmt"># We recommend the Bayesian model for analysis, but you can replace this with "mle" for a quick, initial fit.</span>
+model_type <- "<span class="rparam">bayes</span>"
 
 {% if g.user.is_authenticated %}<span class="rcmt"># This is your personal api access token.</span>
 <span class="rcmt"># It grants you (and anyone you share it with) secure access to your restricted data, if applicable.</span>
 my_api_token <- "<span class="rparam">{{g.user.token}}</span>"
 
 {% endif %}<span class="rcmt"># Get StreamPULSE data for streamMetabolizer</span>
-fitdata <- <span class="rfn">sp_metab(</span>sitecode = <span class="rparam" id='site_code'>site_code</span>,
+fitdata <- <span class="rfn">sp_data_metab(</span>sitecode = <span class="rparam" id='site_code'>site_code</span>,
     startdate = <span class="rparam" id='start_date'>start_date</span>,
     enddate = <span class="rparam" id='end_date'>end_date</span>,
-    type = "mle",
+    type = model_type,
     token = <span class="rparam">{% if g.user.is_authenticated %}my_api_token{% else %}NULL{% endif %}</span><span class="rfn">)</span>
 <span class="rcmt"># If you omit the <i>token</i> option or use <i>token=NULL</i>, you will only be able to access publicly-available data.</span>
 
 <span class="rcmt"># streamMetabolizer functions</span>
-modname <- <span class="rfn">mm_name(</span>type = "mle"<span class="rfn">)</span>
+<span class="rcmt"># Note, the Bayesian model can take a significant amount of time to fit (like an hour or more)...</span>
+modname <- <span class="rfn">mm_name(</span>type = model_type<span class="rfn">)</span>
 modspecs <- <span class="rfn">specs(</span>modname<span class="rfn">)</span>
 modfit <- <span class="rfn">metab(</span>specs = modspecs, data = fitdata<span class="rfn">)</span>
 

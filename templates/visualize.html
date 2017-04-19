@@ -6,22 +6,23 @@
   <p class="lead">Use this interface to rapidly preview data and view provisional model estimates.<p>
 
   <form id="viz">
-    <div class="col-md-8">
-      <select placeholder="Choose a site" id="dsite" name="site">
-        <option value="">Choose a site</option>
-        {% for sv, sn in sites %}
-        <option value="{{sv}}">{{sn}}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-4">
-      <button name="vizsite" class="btn btn-primary btn-block">Select</button>
-    </div>
+    <select placeholder="Choose a site" id="dsite" name="site">
+      <option value="">Choose a site</option>
+      {% for sv, sn, sd, ed, va in sites %}
+      <option value="{{sv}}">{{sn}}</option>
+      {% endfor %}
+    </select>
+    <br>
+    <input class="form-control" type="text" id="datepicker" name="daterange" value="" placeholder="Select date range"><br>
+    Select variables:<br>
+    <div id="viz_vars"></div><br>
+    <button name="getviz" class="btn btn-primary btn-block">View</button>
   </form>
 </div></div>
 <br>
 
 <!--
+<button name="vizsite" class="btn btn-primary btn-block">Select</button>
 <div class="row"><div class="col-md-6 col-md-offset-3">
   <form id="viz" class="form-horizontal">
     <div class="input-group input-group-sm">
@@ -36,8 +37,7 @@
       </span>
     </div><br>
   </form>
-</div></div> -->
-
+</div></div>
 
 <div class="row" id="vizspecs"><div class="col-md-6 col-md-offset-3">
   <form id="viz_specs" class="form-horizontal">
@@ -45,16 +45,12 @@
     <input type="hidden" name="site" value="">
     <input type="hidden" name="variables" value="">
     <input class="form-control" type="text" id="datepicker" name="daterange" value="" placeholder="Select date range"><br>
-    <!-- <div class="input-daterange input-group" id="datepicker">
-        <input type="text" id="startDate" class="input-sm form-control" name="startDate" data-date-format="YYYY-MM-DD"/>
-        <span class="input-group-addon">to</span>
-        <input type="text" id="endDate" class="input-sm form-control" name="endDate" data-date-format="YYYY-MM-DD"/>
-    </div><br> -->
     Select variables:<br>
     <div id="viz_vars"></div><br>
     <button name="getviz" class="btn btn-primary btn-block">View</button>
   </form>
 </div></div>
+-->
 
 <hr>
 
@@ -84,6 +80,51 @@ $('#dsite').selectize({
         }
     }
 });
+
+var sitedict = {}
+{% for sv, sn, sd, ed, va in sites %}
+  sitedict['{{sv}}'] = {dates:['{{sd}}','{{ed}}'], vars:"{{','.join(va)}}"}
+{% endfor %}
+
+$('#dsite').change(function(){
+  //http://www.daterangepicker.com/
+  $('#graphcontrol').hide();
+  var siteinfo = sitedict[$('select[name=site]').val()];
+  var sitedates = siteinfo['dates']
+  $('#datepicker').daterangepicker({
+    locale: {format: 'YYYY-MM-DD', separator: ' to '},
+    startDate: sitedates[0],
+    endDate: sitedates[1],
+    minDate: sitedates[0],
+    maxDate: sitedates[1],
+    autoApply: true,
+    opens: 'left'
+  });
+
+  $('#start_date').text( '"'+$("#datepicker").data('daterangepicker').startDate.format('YYYY-MM-DD')+'"' );
+  $('#end_date').text( '"'+$("#datepicker").data('daterangepicker').endDate.format('YYYY-MM-DD')+'"' );
+
+  var sitevars = siteinfo['vars'].split(",")
+  $("#graphs").empty();
+  $("#viz_vars").empty();
+  $('#backgraphlist')
+      .find('option')
+      .remove()
+      .end()
+      .append('<option value="None" selected>None</option>');
+  for (var i = 0; i < sitevars.length; ++i) {
+      $('#viz_vars').append('<input type="checkbox" id="variables" value="'+sitevars[i]+'" checked> '+sitevars[i]+'<br>');
+      // add stuff to dropdown
+      $('#backgraphlist').append('<option value="'+sitevars[i]+'">'+sitevars[i]+'</option>');
+  }
+
+});
+
+$('#datepicker').on('apply.daterangepicker', function(ev, picker) {
+  $('#start_date').text( '"'+picker.startDate.format('YYYY-MM-DD')+'"' );
+  $('#end_date').text( '"'+picker.endDate.format('YYYY-MM-DD')+'"' );
+});
+
 
 // var margin = {top: 40, right: 40, bottom: 40, left: 40},
 //     width = $("#graphs").width() - margin.left - margin.right,
@@ -157,73 +198,75 @@ $('#dsite').selectize({
 //   }
 // }
 
-$(function(){
-  $("button[name=vizsite]").click(function(){
-    $('#loading').show();
-    var dat = {}
-    dat['site'] = [$('select[name=site]').val()];
-    $.ajax({
-      type: 'POST',
-      url:'/_getstats',
-      data: JSON.stringify(dat),
-      contentType: 'application/json;charset=UTF-8',
-      success: function(response){
-        $('#loading').hide();
-        $('#graphcontrol').hide();
-        $('#datepicker').daterangepicker({
-          locale: {format: 'YYYY-MM-DD', separator: ' to '},
-          startDate: response.initDate,
-          endDate: response.endDate,
-          minDate: response.startDate,
-          maxDate: response.endDate,
-          autoApply: true,
-          opens: 'left'
-        });
-        // $('.input-daterange').datepicker({
-        //     startDate: response.startDate,
-        //     endDate: response.endDate,
-        //     todayHighlight: true,
-        //     format: 'yyyy-mm-dd'
-        // });
-        // $('#startDate').val(response.initDate);
-        // $('#endDate').val(response.endDate);
-        $('#vizspecs input[name=site]').val(response.site);
-        $("#graphs").empty();
-        $("#viz_vars").empty();
-        $('#backgraphlist')
-            .find('option')
-            .remove()
-            .end()
-            .append('<option value="None" selected>None</option>');
-        for (var i = 0; i < response.variables.length; ++i) {
-            $('#viz_vars').append('<input type="checkbox" id="variables" value="'+response.variables[i]+'" checked> '+response.variables[i]+'<br>');
-            // add stuff to dropdown
-            $('#backgraphlist').append('<option value="'+response.variables[i]+'">'+response.variables[i]+'</option>');
-        }
-        $('#vizspecs').show();
-      },
-      error: function(error){
-        console.log(error);
-      }
-    });
-    return false;
-  })
-});
+// $(function(){
+//   $("button[name=vizsite]").click(function(){
+//     $('#loading').show();
+//     var dat = {}
+//     dat['site'] = [$('select[name=site]').val()];
+//     $.ajax({
+//       type: 'POST',
+//       url:'/_getstats',
+//       data: JSON.stringify(dat),
+//       contentType: 'application/json;charset=UTF-8',
+//       success: function(response){
+//         $('#loading').hide();
+//         $('#graphcontrol').hide();
+//         $('#datepicker').daterangepicker({
+//           locale: {format: 'YYYY-MM-DD', separator: ' to '},
+//           startDate: response.initDate,
+//           endDate: response.endDate,
+//           minDate: response.startDate,
+//           maxDate: response.endDate,
+//           autoApply: true,
+//           opens: 'left'
+//         });
+//         // $('.input-daterange').datepicker({
+//         //     startDate: response.startDate,
+//         //     endDate: response.endDate,
+//         //     todayHighlight: true,
+//         //     format: 'yyyy-mm-dd'
+//         // });
+//         // $('#startDate').val(response.initDate);
+//         // $('#endDate').val(response.endDate);
+//         $('#vizspecs input[name=site]').val(response.site);
+//         $("#graphs").empty();
+//         $("#viz_vars").empty();
+//         $('#backgraphlist')
+//             .find('option')
+//             .remove()
+//             .end()
+//             .append('<option value="None" selected>None</option>');
+//         for (var i = 0; i < response.variables.length; ++i) {
+//             $('#viz_vars').append('<input type="checkbox" id="variables" value="'+response.variables[i]+'" checked> '+response.variables[i]+'<br>');
+//             // add stuff to dropdown
+//             $('#backgraphlist').append('<option value="'+response.variables[i]+'">'+response.variables[i]+'</option>');
+//         }
+//         $('#vizspecs').show();
+//       },
+//       error: function(error){
+//         console.log(error);
+//       }
+//     });
+//     return false;
+//   })
+// });
 
 $(function(){
   $("button[name=getviz]").click(function(){
+    $('#loading').show();
     var dat = {}
     dat['site'] = $('select[name=site]').val();
     dat['startDate'] = $("#datepicker").data('daterangepicker').startDate.format('YYYY-MM-DD');//$('#startDate').datepicker().val();
     dat['endDate'] = $("#datepicker").data('daterangepicker').endDate.format('YYYY-MM-DD');//$('#endDate').datepicker().val();
     dat['variables'] = $('#variables:checked').map(function() { return this.value; }).get();
-    $('#vizspecs input[name=variables]').val( $('#variables:checked').map(function() { return this.value; }).get() );
+    // $('#vizspecs input[name=variables]').val( $('#variables:checked').map(function() { return this.value; }).get() );
     $.ajax({
       type: 'POST',
       url:'/_getviz',
       data: JSON.stringify(dat),
       contentType: 'application/json;charset=UTF-8',
       success: function(response){
+        $('#loading').hide();
         $("#graphs").empty();
         $('#graphcontrol').show();
         data = JSON.parse(response.dat);

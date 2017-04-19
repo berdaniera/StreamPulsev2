@@ -722,23 +722,47 @@ def getsitenames(regionsite):
 
 @app.route('/download')
 def download():
-    xx = pd.read_sql("select distinct region, site from data", db.engine)
-    sites = [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
-    # xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
-    # sites = xx['sites'].tolist()
-    # check login status... allow download without login for certain sites.
+    vv = pd.read_sql("select distinct region, site, variable from data", db.engine)
+    sites = [x[0]+"_"+x[1] for x in zip(vv.region,vv.site)]
     if current_user.is_authenticated:
         sites = authenticate_sites(sites, user=current_user.get_id())
     else:
         sites = authenticate_sites(sites)
-    # sites = [(x.split("_")[0],x) for x in xx.sites.tolist()]
-    # sitedict = {'0ALL':'ALL'}
-    # for x in sites:
-    #     if x[0] not in sitedict:
-    #         sitedict[x[0]] = []
-    #     sitedict[x[0]].append(x[1])
-    sitedict = sorted([getsitenames(x) for x in sites], key=lambda tup: tup[1])
+    ss = []
+    for site in sites:
+        r,s = site.split("_")
+        ss.append("(region='"+r+"' and site='"+s+"') ")
+    qs = "or ".join(ss)
+    nn = pd.read_sql("select region, site, name from site",db.engine)
+    dd = pd.read_sql("select region, site, min(DateTime_UTC) as startdate, max(DateTime_UTC) as enddate from data where "+qs+"group by region, site", db.engine)
+    vv = vv.groupby(['region','site'])['variable'].unique().reset_index()
+    dx = pd.merge(vv, nn.merge(dd, on=['region','site'], how='right'), on=['region','site'], how='right')
+    dx['regionsite'] = [x[0]+"_"+x[1] for x in zip(dx.region,dx.site)]
+    dx.startdate = dx.startdate.apply(lambda x: x.strftime('%Y-%m-%d'))
+    dx.enddate = dx.enddate.apply(lambda x: x.strftime('%Y-%m-%d'))
+    dx.name = dx.region+" - "+dx.name
+    dvv = dx[['regionsite','name','startdate','enddate','variable']].values
+    sitedict = sorted([tuple(x) for x in dvv], key=lambda tup: tup[1])
     return render_template('download.html',sites=sitedict)
+
+# CODE FROM OLD Download, depreciated
+# xx = pd.read_sql("select distinct region, site from data", db.engine)
+# sites = [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
+# # xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
+# # sites = xx['sites'].tolist()
+# # check login status... allow download without login for certain sites.
+# if current_user.is_authenticated:
+#     sites = authenticate_sites(sites, user=current_user.get_id())
+# else:
+#     sites = authenticate_sites(sites)
+# # sites = [(x.split("_")[0],x) for x in xx.sites.tolist()]
+# # sitedict = {'0ALL':'ALL'}
+# # for x in sites:
+# #     if x[0] not in sitedict:
+# #         sitedict[x[0]] = []
+# #     sitedict[x[0]].append(x[1])
+# sitedict = sorted([getsitenames(x) for x in sites], key=lambda tup: tup[1])
+# return render_template('download.html',sites=sitedict)
 
 @app.route('/_getstats',methods=['POST'])
 def getstats():
@@ -753,10 +777,11 @@ def getstats():
 
 @app.route('/_getcsv',methods=["POST"])
 def getcsv():
-    sitenm = request.form['site'].split(",")
+    sitenm = request.form['sites'].split(",")
     startDate = request.form['startDate']#.split("T")[0]
     endDate = request.form['endDate']
     variables = request.form['variables'].split(",")
+    print sitenm, startDate, endDate, variables
     sqlq = "select * from data where concat(region,'_',site) in ('"+"', '".join(sitenm)+"') "+\
         "and DateTime_UTC>'"+startDate+"' "+\
         "and DateTime_UTC<'"+endDate+"' "+\
@@ -789,16 +814,41 @@ def getcsv():
 @app.route('/visualize')
 # @login_required
 def visualize():
-    # xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
-    # sites = xx['sites'].tolist()
-    xx = pd.read_sql("select distinct region, site from data", db.engine)
-    sites = [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
+    vv = pd.read_sql("select distinct region, site, variable from data", db.engine)
+    sites = [x[0]+"_"+x[1] for x in zip(vv.region,vv.site)]
     if current_user.is_authenticated:
         sites = authenticate_sites(sites, user=current_user.get_id())
     else:
         sites = authenticate_sites(sites)
-    sitedict = sorted([getsitenames(x) for x in sites], key=lambda tup: tup[1])
+    ss = []
+    for site in sites:
+        r,s = site.split("_")
+        ss.append("(region='"+r+"' and site='"+s+"') ")
+    qs = "or ".join(ss)
+    nn = pd.read_sql("select region, site, name from site",db.engine)
+    dd = pd.read_sql("select region, site, min(DateTime_UTC) as startdate, max(DateTime_UTC) as enddate from data where "+qs+"group by region, site", db.engine)
+    vv = vv.groupby(['region','site'])['variable'].unique().reset_index()
+    dx = pd.merge(vv, nn.merge(dd, on=['region','site'], how='right'), on=['region','site'], how='right')
+    dx['regionsite'] = [x[0]+"_"+x[1] for x in zip(dx.region,dx.site)]
+    dx.startdate = dx.startdate.apply(lambda x: x.strftime('%Y-%m-%d'))
+    dx.enddate = dx.enddate.apply(lambda x: x.strftime('%Y-%m-%d'))
+    dx.name = dx.region+" - "+dx.name
+    dvv = dx[['regionsite','name','startdate','enddate','variable']].values
+    sitedict = sorted([tuple(x) for x in dvv], key=lambda tup: tup[1])
     return render_template('visualize.html',sites=sitedict)
+
+# OLD CODE FROM VISUALIZE, depriciated
+# return "success"
+#
+# # xx = pd.read_sql("select distinct concat(region,'_',site) as sites from data", db.engine)
+# # sites = xx['sites'].tolist()
+# xx = pd.read_sql("select distinct region, site from data", db.engine)
+# sites = [x[0]+"_"+x[1] for x in zip(xx.region,xx.site)]
+# if current_user.is_authenticated:
+#     sites = authenticate_sites(sites, user=current_user.get_id())
+# else:
+#     sites = authenticate_sites(sites)
+# sitedict = sorted([getsitenames(x) for x in sites], key=lambda tup: tup[1])
 
 @app.route('/_getviz',methods=["POST"])
 def getviz():
