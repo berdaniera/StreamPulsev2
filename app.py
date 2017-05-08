@@ -263,7 +263,7 @@ def allowed_file(filename):
 
 def read_hobo(f):
     xt = pd.read_csv(f, skiprows=[0])
-    cols = [x for x in xt.columns.tolist() if re.match("^#$|Coupler|File|Host|Connected|Attached|Stopped|End|Unnamed|Bad",x) is None]
+    cols = [x for x in xt.columns.tolist() if re.match("^#$|Coupler|File|Host|Connected|Attached|Stopped|End|Unnamed|Good|Bad",x) is None]
     xt = xt[cols]
     m = [re.sub(" ","",x.split(",")[0]) for x in xt.columns.tolist()]
     u = [x.split(",")[1].split(" ")[1] for x in xt.columns.tolist()]

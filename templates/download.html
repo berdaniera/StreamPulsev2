@@ -130,7 +130,7 @@ $('#dsite').change(function(){
   // get all variables in all sites
   var sitevars = $('select[name=site]').val().map(function(x){ return sitedict[x]['vars'].split(",") }).reduce(function(a,b){ return a.concat(b) })
   // get unique variables in list
-  var uvars = sitevars.filter(function(item, i, ar){ return ar.indexOf(item) === i; })
+  var uvars = sitevars.filter(function(item, i, ar){ return ar.indexOf(item) === i; }).sort()
   for (var i = 0; i < uvars.length; ++i) {
       $('#dnld_vars').append('<input type="checkbox" id="variables" value="'+uvars[i]+'" checked> '+uvars[i]+'<br>');
   }

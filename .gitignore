@@ -9,3 +9,4 @@ spenv/*
 config*
 wsgi*
 *.ini
+local.py
