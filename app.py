@@ -634,6 +634,8 @@ def manual_upload():
     dd['region'] = rgn
     dd['site'] = ste
     dd['value'] = pd.to_numeric(dd['value'], errors='coerce')
+    # region site datetime variable value
+    dd = dd[['region','site','DateTime_UTC','variable','value']]
     dd.to_sql("manual", db.engine, if_exists='append', index=False, chunksize=1000)
     return jsonify(result="success")
 
@@ -786,9 +788,10 @@ def getcsv():
         "and DateTime_UTC>'"+startDate+"' "+\
         "and DateTime_UTC<'"+endDate+"' "+\
         "and variable in ('"+"', '".join(variables)+"')"
-    xx = pd.read_sql(sqlq, db.engine)
+    xx = pd.read_sql(sqlq, db.engine) # maybe don't do pandas?
     xx.loc[xx.flag==0,"value"] = None # set NA values
     xx.dropna(subset=['value'], inplace=True) # remove rows with NA value
+    print xx.shape
     if request.form.get('flag') is not None:
         xx.drop(['id'], axis=1, inplace=True) # keep the flags
     else:
