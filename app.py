@@ -211,7 +211,7 @@ class Downloads(db.Model):
     dnld_sites = db.Column(db.String(255))
     dnld_date0 = db.Column(db.DateTime)
     dnld_date1 = db.Column(db.DateTime)
-    dnld_vars = db.Column(db.String(255))
+    dnld_vars = db.Column(db.String(400))
     def __init__(self, timestamp, userID, email, dnld_sites, dnld_date0, dnld_date1, dnld_vars):
         self.timestamp = timestamp
         self.userID = userID
