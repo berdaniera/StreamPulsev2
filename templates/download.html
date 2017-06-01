@@ -43,6 +43,20 @@
       </select> &nbsp; <a href="https://en.wikipedia.org/wiki/Wide_and_narrow_data" target="_new"><i class="fa fa-question-circle-o"></i></a>
     </div><br>
 
+    <div class="form-inline">
+      <label>
+        <input class="form-control" type="checkbox" name="policy" required> I agree to the <a href="policy">StreamPULSE data policy</a> (required).
+      </label>
+    </div><br>
+
+    {% if not g.user.is_authenticated %}
+    <div class="form-inline">
+        Email (optional): <input class="form-control" type="textbox" name="email" placeholder="Email address, optional">
+        <br>
+      <span class="text-muted">We will add you to our mailing list to get occasional (3-4 times a year) updates about our project. We will not share your email with anyone else.<span>
+    </div><br>
+    {% endif %}
+
     <button id="getcsv" type="submit" value=Download class="btn btn-primary btn-block">Download</button>
   </form>
 </div></div>

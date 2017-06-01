@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, Markup, session, flash, render_template, request, jsonify, url_for, make_response, redirect, g
+from flask import Flask, Markup, session, flash, render_template, request, jsonify, url_for, make_response, send_file, redirect, g
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from sunrise_sunset import SunriseSunset as suns
 from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 from itsdangerous import URLSafeTimedSerializer
 from flask_mail import Mail,  Message
 from datetime import datetime, timedelta
@@ -16,6 +17,9 @@ import pandas as pd
 import numpy as np
 import requests
 import binascii
+import tempfile
+import zipfile
+import shutil
 #import pysb
 import os
 import re
@@ -198,6 +202,26 @@ class User(db.Model):
         return self.qaqc.split(",") # which tables can they edit
     def __repr__(self):
         return '<User %r>' % self.username
+
+class Downloads(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime)
+    userID = db.Column(db.Integer)
+    email = db.Column(db.String(255))
+    dnld_sites = db.Column(db.String(255))
+    dnld_date0 = db.Column(db.DateTime)
+    dnld_date1 = db.Column(db.DateTime)
+    dnld_vars = db.Column(db.String(255))
+    def __init__(self, timestamp, userID, email, dnld_sites, dnld_date0, dnld_date1, dnld_vars):
+        self.timestamp = timestamp
+        self.userID = userID
+        self.email = email
+        self.dnld_sites = dnld_sites
+        self.dnld_date0 = dnld_date0
+        self.dnld_date1 = dnld_date1
+        self.dnld_vars = dnld_vars
+    def __repr__(self):
+        return '<Download %r>' % (self.id)
 
 db.create_all()
 
@@ -598,7 +622,7 @@ def upload():
             rr,ss = site[0].split("_")
             cdict = pd.read_sql("select * from cols where region='"+rr+"' and site='"+ss+"'", db.engine)
             cdict = dict(zip(cdict['rawcol'],cdict['dbcol']))
-            flash("NOTE: I recently updated the column naming from Hobo dataloggers. Please double check your column matching. Thanks!",'alert-warning')
+            flash("Please double check your column matching. Thanks!",'alert-warning')
         except IOError:
             msg = Markup('Unknown error. Please <a href="mailto:aaron.berdanier@gmail.com" class="alert-link">email Aaron</a> with a copy of the file you tried to upload...')
             flash(msg,'alert-danger')
@@ -783,36 +807,66 @@ def getcsv():
     startDate = request.form['startDate']#.split("T")[0]
     endDate = request.form['endDate']
     variables = request.form['variables'].split(",")
-    print sitenm, startDate, endDate, variables
-    sqlq = "select * from data where concat(region,'_',site) in ('"+"', '".join(sitenm)+"') "+\
-        "and DateTime_UTC>'"+startDate+"' "+\
-        "and DateTime_UTC<'"+endDate+"' "+\
-        "and variable in ('"+"', '".join(variables)+"')"
-    xx = pd.read_sql(sqlq, db.engine) # maybe don't do pandas?
-    xx.loc[xx.flag==0,"value"] = None # set NA values
-    xx.dropna(subset=['value'], inplace=True) # remove rows with NA value
-    print xx.shape
-    if request.form.get('flag') is not None:
-        xx.drop(['id'], axis=1, inplace=True) # keep the flags
-    else:
-        xx.drop(['id','flag'], axis=1, inplace=True) # get rid of them
-    if request.form.get('usgs') is not None:
-        xu = get_usgs(sitenm,startDate,endDate)
-        if len(xu) is not 0:
-            xx = pd.concat([xx,xu])
+    email = request.form.get('email')
+    if current_user.get_id() is None: # not logged in
+        uid = None
+        if email is not None: # send email to aaron, add to csv
+            elist = open("static/email_list.csv","a")
+            elist.write(email+"\n")
+            elist.close()
+    else: # get logged in email
+        uid = int(current_user.get_id())
+        email = User.query.filter(User.id==uid).first()['email']
+    ## add download stats
+    dnld_stat = Downloads(timestamp=datetime.utcnow(), userID=uid, email=email,
+        dnld_sites=request.form['sites'], dnld_date0=startDate,
+        dnld_date1=endDate, dnld_vars=request.form['variables'])
+    db.session.add(dnld_stat)
+    db.session.commit()
+    ## get data
     aggregate = request.form['aggregate']
     dataform = request.form['dataform'] # wide or long
-    # check for doubles with same datetime, region, site, variable...
-    xx = xx.set_index(["DateTime_UTC","region","site","variable"])
-    xx = xx[~xx.index.duplicated(keep='last')].sort_index().reset_index()
-    if aggregate!="none":
-        xx = xx.set_index(['DateTime_UTC']).groupby(['region','site','variable']).resample(aggregate).mean().reset_index()
-    if dataform=="wide":
-        xx = xx.pivot_table("value",['region','site','DateTime_UTC'],'variable').reset_index()
-    resp = make_response(xx.to_csv(index=False))
-    resp.headers["Content-Disposition"] = "attachment; filename=StreamPulseData.csv"
-    resp.headers["Content-Type"] = "text/csv"
-    return resp
+    tmp = tempfile.mkdtemp()
+    # add the data policy to the folder
+    shutil.copy2("static/streampulse_data_policy.txt", tmp)
+    # loop through sites
+    for s in sitenm:
+        # copy metadata, if it exists
+        mdfile = 'static/metadata/'+s+'_metadata.txt'
+        if os.path.isfile(mdfile):
+            shutil.copy2(mdfile, tmp)
+        # get data for site s
+        sqlq = "select * from data where concat(region,'_',site)='"+s+"' "+\
+            "and DateTime_UTC>'"+startDate+"' "+\
+            "and DateTime_UTC<'"+endDate+"' "+\
+            "and variable in ('"+"', '".join(variables)+"')"
+        xx = pd.read_sql(sqlq, db.engine)
+        xx.loc[xx.flag==0,"value"] = None # set NA values
+        xx.dropna(subset=['value'], inplace=True) # remove rows with NA value
+        if request.form.get('flag') is not None:
+            xx.drop(['id'], axis=1, inplace=True) # keep the flags
+        else:
+            xx.drop(['id','flag'], axis=1, inplace=True) # get rid of them
+        if request.form.get('usgs') is not None:
+            #xu = get_usgs([s],startDate,endDate)
+            xu = get_usgs([s], xx['DateTime'].min(), xx['DateTime'].max())
+            if len(xu) is not 0:
+                xx = pd.concat([xx,xu])
+        # check for doubles with same datetime, region, site, variable...
+        xx = xx.set_index(["DateTime_UTC","region","site","variable"])
+        xx = xx[~xx.index.duplicated(keep='last')].sort_index().reset_index()
+        if aggregate!="none":
+            xx = xx.set_index(['DateTime_UTC']).groupby(['region','site','variable']).resample(aggregate).mean().reset_index()
+        if dataform=="wide":
+            xx = xx.pivot_table("value",['region','site','DateTime_UTC'],'variable').reset_index()
+        xx.to_csv(tmp+'/'+s+'_data.csv', index=False)
+    #
+    writefiles = os.listdir(tmp) # list files in the tmp directory
+    zipname = 'SPdata_'+datetime.now().strftime("%Y-%m-%d")+'.zip'
+    with zipfile.ZipFile(tmp+'/'+zipname,'w') as zf:
+        [zf.write(tmp+'/'+f,f) for f in writefiles]
+    flash('File sent: '+zipname, 'alert-success')
+    return send_file(tmp+'/'+zipname, 'application/zip', as_attachment=True, attachment_filename=zipname)
 
 @app.route('/visualize')
 # @login_required
