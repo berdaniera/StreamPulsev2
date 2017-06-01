@@ -2,6 +2,7 @@ import pysb
 import config as cfg
 import os
 import time
+import numpy
 
 ## login to sb
 sb = pysb.SbSession()
@@ -15,8 +16,9 @@ insb = sb.get_item(cfg.SB_META) # get files
 fin_sb = []
 if 'files' in insb:
     fin_sb = [f['name'] for f in insb['files']] # get file names
+
 upmeta = [cfg.META_FOLDER+"/"+x for x in metaf if x not in fin_sb]
-print '\nSaving:\n'
+print '\nSaving: '
 print upmeta
 metares = sb.upload_files_and_update_item(insb, upmeta)
 
@@ -28,7 +30,10 @@ insb = sb.get_item(cfg.SB_DATA) # get files
 fin_sb = []
 if 'files' in insb:
     fin_sb = [f['name'] for f in insb['files']] # get file names
+
 updata = [cfg.UPLOAD_FOLDER+"/"+x for x in dataf if x not in fin_sb]
-print '\nSaving:\n'
-print updata
-datares = sb.upload_files_and_update_item(insb, updata)
+slices = [updata[x:x+10] for x in xrange(0,len(updata),10)]
+for s in slices:
+    print '\nSaving: '
+    print updata
+    datares = sb.upload_files_and_update_item(insb, s)
