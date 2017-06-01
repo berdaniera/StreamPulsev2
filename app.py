@@ -816,7 +816,8 @@ def getcsv():
             elist.close()
     else: # get logged in email
         uid = int(current_user.get_id())
-        email = User.query.filter(User.id==uid).first()['email']
+        myuser = User.query.filter(User.id==uid).first()
+        email = myuser.email
     ## add download stats
     dnld_stat = Downloads(timestamp=datetime.utcnow(), userID=uid, email=email,
         dnld_sites=request.form['sites'], dnld_date0=startDate,
