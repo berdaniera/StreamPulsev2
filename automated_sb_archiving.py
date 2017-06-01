@@ -33,9 +33,10 @@ if 'files' in insb:
     fin_sb = [f['name'] for f in insb['files']] # get file names
 
 updata = [cfg.UPLOAD_FOLDER+"/"+x for x in dataf if x not in fin_sb]
-slices = [updata[x:x+10] for x in xrange(0,len(updata),10)]
+nper = 10
+slices = [updata[x:x+nper] for x in xrange(0, len(updata), nper)]
 for s in slices:
     print '\nSaving: '
     print s
     datares = sb.upload_files_and_update_item(insb, s)
-    time.sleep(3)
+    time.sleep(30)
