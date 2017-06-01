@@ -3,6 +3,8 @@ import config as cfg
 import os
 import time
 
+## NEED TO ADD CODE FOR EMBARGOED SITES
+
 ## login to sb
 sb = pysb.SbSession()
 sb.login(cfg.SB_USER, cfg.SB_PASS)
@@ -36,3 +38,4 @@ for s in slices:
     print '\nSaving: '
     print s
     datares = sb.upload_files_and_update_item(insb, s)
+    time.sleep(3)
