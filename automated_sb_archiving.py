@@ -39,4 +39,4 @@ for s in slices:
     print '\nSaving: '
     print s
     datares = sb.upload_files_and_update_item(insb, s)
-    time.sleep(30)
+    time.sleep(60)
