@@ -869,7 +869,7 @@ def getcsv():
     zipname = 'SPdata_'+datetime.now().strftime("%Y-%m-%d")+'.zip'
     with zipfile.ZipFile(tmp+'/'+zipname,'w') as zf:
         [zf.write(tmp+'/'+f,f) for f in writefiles]
-    flash('File sent: '+zipname, 'alert-success')
+    #flash('File sent: '+zipname, 'alert-success')
     return send_file(tmp+'/'+zipname, 'application/zip', as_attachment=True, attachment_filename=zipname)
 
 @app.route('/visualize')
