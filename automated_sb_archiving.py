@@ -34,5 +34,5 @@ updata = [cfg.UPLOAD_FOLDER+"/"+x for x in dataf if x not in fin_sb]
 slices = [updata[x:x+10] for x in xrange(0,len(updata),10)]
 for s in slices:
     print '\nSaving: '
-    print updata
+    print s
     datares = sb.upload_files_and_update_item(insb, s)
