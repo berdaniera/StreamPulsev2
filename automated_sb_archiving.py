@@ -2,7 +2,6 @@ import pysb
 import config as cfg
 import os
 import time
-import numpy
 
 ## login to sb
 sb = pysb.SbSession()
