@@ -832,7 +832,7 @@ def getcsv():
     # loop through sites
     for s in sitenm:
         # copy metadata, if it exists
-        mdfile = 'static/metadata/'+s+'_metadata.txt'
+        mdfile = os.path.join(app.config['META_FOLDER'],s+"_metadata.txt")
         if os.path.isfile(mdfile):
             shutil.copy2(mdfile, tmp)
         # get data for site s
