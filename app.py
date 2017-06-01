@@ -832,16 +832,14 @@ def getcsv():
     shutil.copy2("static/streampulse_data_policy.txt", tmp)
     # loop through sites
     for s in sitenm:
-        # copy metadata, if it exists
-        mdfile = os.path.join(app.config['META_FOLDER'],s+"_metadata.txt")
-        if os.path.isfile(mdfile):
-            shutil.copy2(mdfile, tmp)
         # get data for site s
         sqlq = "select * from data where concat(region,'_',site)='"+s+"' "+\
             "and DateTime_UTC>'"+startDate+"' "+\
             "and DateTime_UTC<'"+endDate+"' "+\
             "and variable in ('"+"', '".join(variables)+"')"
         xx = pd.read_sql(sqlq, db.engine)
+        if len(xx)<1:
+            continue
         xx.loc[xx.flag==0,"value"] = None # set NA values
         xx.dropna(subset=['value'], inplace=True) # remove rows with NA value
         if request.form.get('flag') is not None:
@@ -850,7 +848,8 @@ def getcsv():
             xx.drop(['id','flag'], axis=1, inplace=True) # get rid of them
         if request.form.get('usgs') is not None:
             #xu = get_usgs([s],startDate,endDate)
-            xu = get_usgs([s], xx['DateTime'].min(), xx['DateTime'].max())
+            print xx['DateTime_UTC'].min()
+            xu = get_usgs([s], xx['DateTime_UTC'].min().strftime("%Y-%m-%d"), xx['DateTime_UTC'].max().strftime("%Y-%m-%d"))
             if len(xu) is not 0:
                 xx = pd.concat([xx,xu])
         # check for doubles with same datetime, region, site, variable...
@@ -861,6 +860,10 @@ def getcsv():
         if dataform=="wide":
             xx = xx.pivot_table("value",['region','site','DateTime_UTC'],'variable').reset_index()
         xx.to_csv(tmp+'/'+s+'_data.csv', index=False)
+        # copy metadata, if it exists
+        mdfile = os.path.join(app.config['META_FOLDER'],s+"_metadata.txt")
+        if os.path.isfile(mdfile):
+            shutil.copy2(mdfile, tmp)
     #
     writefiles = os.listdir(tmp) # list files in the tmp directory
     zipname = 'SPdata_'+datetime.now().strftime("%Y-%m-%d")+'.zip'
