@@ -48,6 +48,7 @@ db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+mail = Mail(app)
 
 class Data(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -254,6 +255,7 @@ variables = ['DateTime_UTC',
 'WaterPres_kPa',
 'AirTemp_C',
 'AirPres_kPa',
+'Stage_m',
 'Depth_m',
 'Discharge_m3s',
 'Velocity_ms',
