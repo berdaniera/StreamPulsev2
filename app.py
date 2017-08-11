@@ -385,7 +385,7 @@ def panda_usgs(x,jsof):
         colnm = 'USGSDischarge_m3s'
     else:
         usgst.value = usgst.value/3.28084
-        colnm = 'USGSDepth_m'
+        colnm = 'USGSLevel_m'
     usgst['site'] = ts['sourceInfo']['siteCode'][0]['value'] # site code
     return {ts['sourceInfo']['siteCode'][0]['value']:usgst[['dateTime','value']].rename(columns={'dateTime':'DateTime_UTC','value':colnm}).set_index(["DateTime_UTC"])}
 
