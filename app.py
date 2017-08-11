@@ -32,13 +32,6 @@ app.config['UPLOAD_FOLDER'] = cfg.UPLOAD_FOLDER
 app.config['META_FOLDER'] = cfg.META_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16 MB
 app.config['SECURITY_PASSWORD_SALT'] = cfg.SECURITY_PASSWORD_SALT
-app.config['MAIL_SERVER'] = "smtp.gmail.com"
-app.config["MAIL_PORT"] = 465
-app.config["MAIL_USE_SSL"] = True
-app.config["MAIL_USE_TLS"] = False
-app.config["MAIL_DEFAULT_SENDER"] = ("Aaron from StreamPULSE","aaron.berdanier@gmail.com")
-app.config["MAIL_USERNAME"] = cfg.MAIL_USERNAME
-app.config["MAIL_PASSWORD"] = cfg.MAIL_PASSWORD
 
 #sb.login(cfg.SB_USER,cfg.SB_PASS)
 #sbupf = sb.get_item(cfg.SB_UPFL)
