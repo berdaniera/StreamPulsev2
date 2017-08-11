@@ -7,7 +7,6 @@ from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
 from itsdangerous import URLSafeTimedSerializer
-from flask_mail import Mail,  Message
 from datetime import datetime, timedelta
 from dateutil import parser as dtparse
 from math import log, sqrt, floor
@@ -466,8 +465,8 @@ def confirm_token(token, expiration=3600*24): # expires in one day
         return False
     return email
 
-def send_email(to, subject, template):
-    mail.send_message(subject, recipients=[to], html=template)
+# def send_email(to, subject, template):
+#     mail.send_message(subject, recipients=[to], html=template)
 
 ########## PAGES
 @app.route('/register' , methods=['GET','POST'])
