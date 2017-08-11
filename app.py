@@ -48,7 +48,6 @@ db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-mail = Mail(app)
 
 class Data(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -481,7 +480,8 @@ def register():
     flash('User successfully registered', 'alert-success')
     return redirect(url_for('login'))
 
-@app.route('/resetpass', methods=['GET','POST'])
+@app.route('/_reset_sp_pass', methods=['GET','POST'])
+@login_required
 def resetpass():
     if request.method == 'GET':
         return render_template('reset.html')
@@ -493,11 +493,7 @@ def resetpass():
         return redirect(url_for('resetpass'))
     token = generate_confirmation_token(email)
     register_url = url_for('resetpass_confirm', token=token, _external=True)
-    html = render_template('activatelink.html', confirm_url=register_url)
-    subject = "Reset StreamPULSE password"
-    send_email(user.email, subject, html)
-    flash('Got it! Please check your email to finish.', 'alert-success')
-    return redirect(url_for('index'))
+    return jsonify(account=email, reset_url=register_url, note="This link is valid for 24 hours.")
 
 @app.route('/resetpass/<token>' , methods=['GET','POST'])
 def resetpass_confirm(token):
